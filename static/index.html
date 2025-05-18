@@ -1,0 +1,1563 @@
+<!-- static/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipment Inspection RAG System</title>
+    <style>
+       /* Keep existing styles */
+       :root {
+           --primary-color: #2c3e50;
+           --secondary-color: #3498db;
+           --accent-color: #e74c3c;
+           --light-color: #ecf0f1;
+           --dark-color: #34495e;
+           --success-color: #2ecc71;
+           --warning-color: #f39c12;
+           --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+           --border-radius: 6px;
+       }
+
+       * {
+           box-sizing: border-box;
+           margin: 0;
+           padding: 0;
+       }
+
+       body {
+           font-family: var(--font-main);
+           line-height: 1.6;
+           color: var(--dark-color);
+           background-color: var(--light-color);
+           direction: ltr; /* Can be switched to rtl for Persian interface */
+       }
+
+       .container {
+           max-width: 1200px;
+           margin: 0 auto;
+           padding: 20px;
+       }
+
+       header {
+           background-color: var(--primary-color);
+           color: white;
+           padding: 1rem;
+           border-radius: var(--border-radius);
+           margin-bottom: 20px;
+       }
+
+       h1, h2, h3 {
+           margin-bottom: 1rem;
+       }
+
+       .card {
+           background-color: white;
+           border-radius: var(--border-radius);
+           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+           padding: 20px;
+           margin-bottom: 20px;
+       }
+
+       .dashboard {
+           display: grid;
+           grid-template-columns: 1fr 3fr;
+           gap: 20px;
+       }
+
+       .sidebar {
+           background-color: white;
+           border-radius: var(--border-radius);
+           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+           padding: 20px;
+       }
+
+       .main-content {
+           background-color: white;
+           border-radius: var(--border-radius);
+           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+           padding: 20px;
+       }
+
+       .search-box {
+           width: 100%;
+           padding: 10px;
+           border: 1px solid #ddd;
+           border-radius: var(--border-radius);
+           margin-bottom: 20px;
+           font-size: 16px;
+       }
+
+       button {
+           background-color: var(--secondary-color);
+           color: white;
+           border: none;
+           padding: 10px 15px;
+           border-radius: var(--border-radius);
+           cursor: pointer;
+           font-size: 16px;
+           transition: background-color 0.3s;
+       }
+
+       button:hover {
+           background-color: var(--primary-color);
+       }
+       button:disabled {
+           background-color: #cccccc;
+           cursor: not-allowed;
+       }
+
+
+       .filter-section {
+           margin-bottom: 20px;
+       }
+
+       .filter-section h3 {
+           margin-bottom: 10px;
+           color: var(--primary-color);
+       }
+
+       select, input, textarea { /* Added textarea */
+           width: 100%;
+           padding: 8px;
+           margin-bottom: 10px;
+           border: 1px solid #ddd;
+           border-radius: var(--border-radius);
+       }
+
+       .result-item {
+           border-left: 4px solid var(--secondary-color);
+           padding: 10px;
+           margin-bottom: 15px;
+           background-color: #f8f9fa;
+           border-radius: 0 var(--border-radius) var(--border-radius) 0;
+       }
+
+       .result-item h4 {
+           color: var(--primary-color);
+           margin-bottom: 5px;
+       }
+
+       .meta-data {
+           display: flex;
+           flex-wrap: wrap;
+           gap: 10px;
+           margin-bottom: 10px;
+           font-size: 14px; /* Make tags slightly smaller */
+       }
+
+       .tag {
+           background-color: #e0e0e0;
+           padding: 3px 8px;
+           border-radius: 12px;
+           font-size: 12px;
+       }
+
+       .punch-status-0 {
+           background-color: var(--warning-color);
+           color: white;
+       }
+
+       .punch-status-1 {
+           background-color: var(--success-color);
+           color: white;
+       }
+        /* Add other statuses if needed */
+       .punch-status-2 {
+            background-color: var(--dark-color);
+            color: white;
+       }
+
+
+       /* Punch Type color coding for result item border (if we add it back) */
+       /* .punch-type-1 { border-left-color: #e74c3c; } */
+       /* .punch-type-2 { border-left-color: #f39c12; } */
+       /* .punch-type-3 { border-left-color: #3498db; } */
+
+       .tabs {
+           display: flex;
+           margin-bottom: 20px;
+           flex-wrap: wrap; /* Allow tabs to wrap on smaller screens */
+       }
+
+       .tab {
+           padding: 10px 20px;
+           background-color: #f1f1f1;
+           cursor: pointer;
+           border-radius: var(--border-radius) var(--border-radius) 0 0;
+           margin-right: 5px; /* Add margin between tabs */
+           margin-bottom: 5px; /* Add margin for wrapping */
+       }
+
+       .tab.active {
+           background-color: var(--secondary-color);
+           color: white;
+       }
+
+       .tab-content {
+           display: none;
+           padding: 20px;
+           border: 1px solid #ddd;
+           border-radius: 0 var(--border-radius) var(--border-radius) var(--border-radius);
+           border-top-left-radius: var(--border-radius); /* Ensure top-left is rounded */
+           margin-top: -1px; /* Overlap border slightly */
+       }
+
+       .tab-content.active {
+           display: block;
+       }
+
+       .language-toggle {
+           display: flex;
+           justify-content: flex-end;
+           margin-bottom: 10px;
+       }
+
+       .language-btn {
+           background-color: transparent;
+           color: var(--primary-color);
+           border: 1px solid var(--primary-color);
+           padding: 5px 10px;
+           margin-left: 10px;
+           border-radius: var(--border-radius);
+           cursor: pointer;
+       }
+
+       .language-btn.active {
+           background-color: var(--primary-color);
+           color: white;
+       }
+
+       table {
+           width: 100%;
+           border-collapse: collapse;
+           margin-bottom: 20px;
+       }
+
+       th, td {
+           padding: 12px;
+           text-align: left;
+           border-bottom: 1px solid #ddd;
+           word-break: break-word; /* Prevent long text from overflowing */
+       }
+        /* Adjust specific column widths if needed */
+       td:nth-child(3) { /* Description column */
+           max-width: 250px; /* Limit width to prevent extreme stretching */
+           overflow: hidden;
+           text-overflow: ellipsis; /* Add ellipsis if text is too long */
+           white-space: nowrap; /* Keep text on a single line */
+        }
+
+
+       th {
+           background-color: var(--primary-color);
+           color: white;
+       }
+
+       tr:hover {
+           background-color: #f5f5f5;
+       }
+
+       .pagination {
+           display: flex;
+           justify-content: center;
+           margin-top: 20px;
+       }
+
+       .pagination button {
+           margin: 0 5px;
+       }
+
+       .chart-container {
+           height: 300px;
+           margin-bottom: 20px;
+           display: flex; /* Center content */
+           align-items: center;
+           justify-content: center;
+            background-color: #f8f9fa; /* Add a background */
+            border-radius: var(--border-radius);
+            border: 1px solid #ddd;
+       }
+
+       /* Placeholder SVG styles */
+       .chart-container svg rect, .chart-container svg circle {
+           shape-rendering: crispEdges; /* Make bars sharp */
+       }
+
+       .stats-grid {
+           display: grid;
+           grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+           gap: 20px;
+           margin-bottom: 20px;
+       }
+
+       .stat-card {
+           padding: 15px;
+           border-radius: var(--border-radius);
+           background-color: white;
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+           text-align: center;
+       }
+
+       .stat-card h3 {
+           font-size: 14px;
+           color: var(--primary-color);
+           margin-bottom: 0.5rem; /* Adjust margin */
+       }
+
+       .stat-card .number {
+           font-size: 28px;
+           font-weight: bold;
+           color: var(--secondary-color);
+       }
+
+       .form-section {
+           margin-bottom: 20px;
+       }
+
+       .form-group {
+           margin-bottom: 15px;
+       }
+
+       .form-group label {
+           display: block;
+           margin-bottom: 5px;
+           font-weight: bold;
+       }
+
+       .form-group input, .form-group select, .form-group textarea {
+           width: 100%;
+           padding: 10px;
+           border: 1px solid #ddd;
+           border-radius: var(--border-radius);
+       }
+
+       .form-group textarea {
+           height: 100px;
+       }
+
+       .modal {
+           display: none;
+           position: fixed;
+           z-index: 1000;
+           left: 0;
+           top: 0;
+           width: 100%;
+           height: 100%;
+           overflow: auto; /* Enable scroll if needed */
+           background-color: rgba(0, 0, 0, 0.5);
+           padding-top: 60px; /* Place modal content below the top */
+       }
+
+       .modal-content {
+           background-color: white;
+           margin: 5% auto; /* Adjust margin-top for better centering */
+           padding: 20px;
+           border-radius: var(--border-radius);
+           width: 90%; /* Make modal wider on smaller screens */
+           max-width: 700px;
+           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3); /* Add a stronger shadow */
+       }
+
+       .close {
+           color: #aaa;
+           float: right;
+           font-size: 28px;
+           font-weight: bold;
+           cursor: pointer;
+       }
+
+       .close:hover,
+       .close:focus {
+           color: black;
+           text-decoration: none;
+       }
+
+       .loading {
+           display: none;
+           text-align: center;
+           padding: 20px;
+       }
+
+       .spinner {
+           border: 4px solid #f3f3f3;
+           border-top: 4px solid var(--secondary-color);
+           border-radius: 50%;
+           width: 30px;
+           height: 30px;
+           animation: spin 2s linear infinite;
+           margin: 0 auto;
+       }
+
+       @keyframes spin {
+           0% { transform: rotate(0deg); }
+           100% { transform: rotate(360deg); }
+       }
+
+       .error-message {
+           color: var(--accent-color);
+           margin-top: 10px;
+           display: none;
+       }
+
+       .success-message {
+           color: var(--success-color);
+           margin-top: 10px;
+           display: none;
+       }
+
+        /* Responsive design */
+       @media (max-width: 768px) {
+           .dashboard {
+               grid-template-columns: 1fr;
+           }
+
+           .modal-content {
+               width: 90%;
+           }
+
+            .tabs {
+               flex-direction: column;
+           }
+           .tab {
+               margin-right: 0;
+               margin-bottom: 5px;
+           }
+            td:nth-child(3) { /* Description column */
+                max-width: 150px; /* Adjust for smaller screens */
+            }
+       }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="language-toggle">
+                <button class="language-btn active" data-lang="en">English</button>
+                <button class="language-btn" data-lang="fa">فارسی</button>
+            </div>
+            <h1>Equipment Inspection RAG System</h1>
+            <p id="system-description">Equipment inspection and punch management system</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="sidebar">
+                <div class="card">
+                    <h2 id="filters-heading">Filters</h2>
+                    <div class="filter-section">
+                        <h3 id="discipline-filter-heading">Discipline</h3>
+                        <select id="discipline-filter">
+                            <option value="">All</option>
+                            <!-- Options populated dynamically or hardcoded -->
+                            <option value="EL">Electrical (EL)</option>
+                            <option value="Ins">Instrumentation (Ins)</option>
+                             <option value="Mech">Mechanical (Mech)</option>
+                             <option value="Civil">Civil (Civil)</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-section">
+                        <h3 id="item-type-filter-heading">Item Type</h3>
+                        <select id="item-type-filter">
+                            <option value="">All</option>
+                            <!-- Options populated dynamically or hardcoded -->
+                            <option value="CABL_HV/MV">CABL_HV/MV</option>
+                            <option value="JB">JB</option>
+                            <option value="Motor">Motor</option>
+                             <option value="Pump">Pump</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-section">
+                        <h3 id="punch-status-filter-heading">Punch Status</h3>
+                        <select id="punch-status-filter">
+                            <option value="">All</option>
+                            <option value="0">Initial (0)</option>
+                            <option value="1">Resolved (1)</option>
+                             <option value="2">Closed (2)</option>
+                        </select>
+                    </div>
+
+                     <!-- Removing Punch Type Filter as API doesn't support it currently -->
+                    <!-- <div class="filter-section">
+                        <h3>Punch Type</h3>
+                        <select id="punch-type-filter">
+                            <option value="">All</option>
+                            <option value="1">Pre-startup Barrier (1)</option>
+                            <option value="2">Startup Barrier (2)</option>
+                            <option value="3">Delivery Barrier (3)</option>
+                        </select>
+                    </div> -->
+
+                    <button id="apply-filters-btn">Apply Filters</button>
+                </div>
+
+                <div class="card">
+                    <h2 id="quick-stats-heading">Quick Stats</h2>
+                    <div class="stats-grid" id="stats-grid">
+                        <!-- Stats populated dynamically -->
+                         <div class="stat-card">
+                            <h3 id="total-punches-stat">Total Punches</h3>
+                            <div class="number" id="total-punches-count">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 id="open-punches-stat">Open Punches</h3>
+                            <div class="number" id="open-punches-count">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 id="resolved-punches-stat">Resolved Punches</h3>
+                            <div class="number" id="resolved-punches-count">0</div>
+                        </div>
+                         <!-- Example specific stats, can be generalized -->
+                         <div class="stat-card">
+                            <h3 id="electrical-punches-stat">Electrical Punches</h3>
+                            <div class="number" id="electrical-punches-count">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="tabs">
+                    <div class="tab active" data-tab="search-tab" id="search-tab-btn">Search</div>
+                    <div class="tab" data-tab="query-tab" id="query-tab-btn">Query</div>
+                    <div class="tab" data-tab="punches-tab" id="punches-tab-btn">Punches</div>
+                    <div class="tab" data-tab="add-punch-tab" id="add-punch-tab-btn">Add Resolution</div>
+                    <div class="tab" data-tab="analytics-tab" id="analytics-tab-btn">Analytics</div>
+                </div>
+
+                <!-- Search Tab -->
+                <div id="search-tab" class="tab-content active">
+                    <h2 id="search-heading">Search Punch List</h2>
+                    <input type="text" id="search-input" class="search-box" placeholder="Search for punches, items, or tasks...">
+                    <button id="execute-search-btn">Search</button>
+
+                    <h3 id="search-results-heading">Search Results (Uses RAG Query)</h3>
+                    <div class="loading" id="search-loading">
+                        <div class="spinner"></div>
+                        <p id="search-loading-text">Loading results...</p>
+                    </div>
+                     <div class="error-message" id="search-error"></div>
+
+                    <div class="search-results" id="search-results-container">
+                        <!-- Search results populated dynamically -->
+                         <p id="search-placeholder">Enter a query and click 'Search'. The answer will appear in the Query tab.</p>
+                         <!-- Adding dynamic results area if needed -->
+                          <div id="search-rag-answer"></div>
+                    </div>
+                </div>
+
+                <!-- Query Tab -->
+                <div id="query-tab" class="tab-content">
+                    <h2 id="query-heading">Ask the RAG System</h2>
+                    <div class="form-group">
+                        <label for="query-input" id="query-label">Ask a question:</label>
+                        <textarea id="query-input-textarea" placeholder="Ask a question in English or Persian. For example: 'Show me all punches for item MSC COR CP-A48/A.R' or 'چه تعداد پانچ با وضعیت 0 داریم؟'"></textarea>
+                    </div>
+                    <button id="submit-query-btn">Submit Query</button>
+
+                    <div class="loading" id="query-loading">
+                        <div class="spinner"></div>
+                        <p id="query-loading-text">Processing query...</p>
+                    </div>
+                    <div class="error-message" id="query-error"></div>
+
+                    <div class="card" id="query-result-card">
+                        <h3 id="answer-heading">Answer:</h3>
+                        <div id="query-answer">Your query response will appear here.</div>
+                    </div>
+                </div>
+
+                <!-- Punches Tab -->
+                <div id="punches-tab" class="tab-content">
+                    <h2 id="punches-heading">All Punches</h2>
+                     <div class="loading" id="punches-loading">
+                        <div class="spinner"></div>
+                        <p id="punches-loading-text">Loading punches...</p>
+                    </div>
+                     <div class="error-message" id="punches-error"></div>
+                    <table id="punches-table">
+                        <thead>
+                            <tr>
+                                <th id="punch-id-col-header">Punch ID</th>
+                                <th id="task-number-col-header">Task Number</th>
+                                <th id="description-col-header">Description</th>
+                                <th id="item-col-header">Item</th>
+                                <th id="item-type-col-header">Item Type</th>
+                                <th id="status-col-header">Status</th>
+                                 <th id="discipline-col-header">Discipline</th>
+                                <th id="actions-col-header">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="punches-table-body">
+                            <!-- Punch rows populated dynamically -->
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination placeholder - not implemented in backend filtering -->
+                    <!-- <div class="pagination">
+                        <button>Previous</button>
+                        <button>1</button>
+                        <button>2</button>
+                        <button>3</button>
+                        <button>Next</button>
+                    </div> -->
+                </div>
+
+                <!-- Add Resolution Tab -->
+                <div id="add-punch-tab" class="tab-content">
+                    <h2 id="add-resolution-heading">Add Punch Resolution</h2>
+                    <div class="form-section">
+                        <div class="form-group">
+                            <label for="punch-id-resolution" id="punch-id-resolution-label">Punch ID to Resolve:</label>
+                            <input type="text" id="punch-id-resolution" placeholder="Enter Punch ID (e.g., AX014105)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="new-status-resolution" id="new-status-resolution-label">New Status:</label>
+                            <select id="new-status-resolution">
+                                <option value="1">Resolved (1)</option>
+                                <!-- Add other potential statuses if needed -->
+                                <option value="0">Open (0)</option>
+                                 <option value="2">Closed (2)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="resolution-text-resolution" id="resolution-text-resolution-label">Resolution Description:</label>
+                            <textarea id="resolution-text-resolution" placeholder="Describe how the punch was resolved"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="revision-resolution" id="revision-resolution-label">Revision:</label>
+                            <input type="text" id="revision-resolution" placeholder="Enter revision identifier (e.g., timestamp, version)">
+                             <small>e.g., 2023-10-27_v2</small>
+                        </div>
+
+                        <button id="submit-resolution-btn">Submit Resolution</button>
+                    </div>
+
+                    <div class="loading" id="resolution-loading">
+                        <div class="spinner"></div>
+                        <p id="resolution-loading-text">Processing resolution...</p>
+                    </div>
+                    <div class="error-message" id="resolution-error"></div>
+                    <div class="success-message" id="resolution-success">
+                        <div class="card">
+                            <h3 id="resolution-success-heading">Resolution Success</h3>
+                            <p id="resolution-success-text">The punch resolution has been successfully added to the system.</p>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Analytics Tab -->
+                <div id="analytics-tab" class="tab-content">
+                    <h2 id="analytics-heading">Analytics Dashboard</h2>
+
+                    <div class="stats-grid">
+                         <!-- Stats copied from Quick Stats, kept for clarity. Update dynamically. -->
+                        <div class="stat-card">
+                            <h3 id="analytics-total-punches-stat">Total Punches</h3>
+                            <div class="number" id="analytics-total-punches-count">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 id="analytics-open-punches-stat">Open Punches</h3>
+                            <div class="number" id="analytics-open-punches-count">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 id="analytics-resolved-punches-stat">Resolved Punches</h3>
+                            <div class="number" id="analytics-resolved-punches-count">0</div>
+                        </div>
+                         <div class="stat-card">
+                            <h3 id="analytics-electrical-punches-stat">Electrical Punches</h3>
+                            <div class="number" id="analytics-electrical-punches-count">0</div>
+                        </div>
+                         <div class="stat-card">
+                            <h3 id="analytics-instrumentation-punches-stat">Instrumentation Punches</h3>
+                            <div class="number" id="analytics-instrumentation-punches-count">0</div>
+                        </div>
+                         <div class="stat-card">
+                             <h3 id="analytics-mechanical-punches-stat">Mechanical Punches</h3>
+                             <div class="number" id="analytics-mechanical-punches-count">0</div>
+                         </div>
+                          <div class="stat-card">
+                             <h3 id="analytics-civil-punches-stat">Civil Punches</h3>
+                             <div class="number" id="analytics-civil-punches-count">0</div>
+                         </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 id="punches-by-type-heading">Punches by Type (Requires Charting Library)</h3>
+                        <div class="chart-container" id="chart-by-type">
+                            <p>This section is a placeholder. Implementing charts requires integrating a JavaScript charting library (like Chart.js) and preparing the data accordingly.</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 id="punches-by-item-type-heading">Punches by Item Type (Requires Charting Library)</h3>
+                        <div class="chart-container" id="chart-by-item-type">
+                             <p>This section is a placeholder. Implementing charts requires integrating a JavaScript charting library (like Chart.js) and preparing the data accordingly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resolve Punch Modal -->
+    <div id="resolve-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modal-resolve-heading">Resolve Punch</h2>
+            <div class="form-section">
+                <div class="form-group">
+                    <label for="modal-punch-id" id="modal-punch-id-label">Punch ID:</label>
+                    <input type="text" id="modal-punch-id" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal-new-status" id="modal-new-status-label">New Status:</label>
+                    <select id="modal-new-status">
+                        <option value="1">Resolved (1)</option>
+                         <option value="0">Open (0)</option>
+                         <option value="2">Closed (2)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal-resolution-text" id="modal-resolution-text-label">Resolution Description:</label>
+                    <textarea id="modal-resolution-text" placeholder="Describe how the punch was resolved"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal-revision" id="modal-revision-label">Revision:</label>
+                    <input type="text" id="modal-revision" placeholder="Enter revision identifier (e.g., timestamp, version)">
+                     <small>e.g., 2023-10-27_v2</small>
+                </div>
+
+                <button id="modal-submit-resolution-btn">Submit Resolution</button>
+                 <div class="loading" id="modal-resolution-loading">
+                    <div class="spinner"></div>
+                    <p id="modal-resolution-loading-text">Processing resolution...</p>
+                </div>
+                 <div class="error-message" id="modal-resolution-error"></div>
+                 <div class="success-message" id="modal-resolution-success">Resolution submitted successfully.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Wait for the DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM fully loaded. Initializing...");
+
+            // --- Global Variables and Constants ---
+            const API_URL = 'http://localhost:8000'; // The backend FastAPI URL
+
+            // UI Elements (Get elements correctly by ID - corrected queryInput ID)
+            const searchInput = document.getElementById('search-input');
+            const executeSearchBtn = document.getElementById('execute-search-btn');
+            const searchResultsContainer = document.getElementById('search-results-container');
+            const searchLoading = document.getElementById('search-loading');
+            const searchError = document.getElementById('search-error');
+            const searchPlaceholder = document.getElementById('search-placeholder');
+            const searchRagAnswerDiv = document.getElementById('search-rag-answer'); // Added for displaying RAG answer in search
+
+            const queryInputTextarea = document.getElementById('query-input-textarea'); // Corrected ID
+            const submitQueryBtn = document.getElementById('submit-query-btn');
+            const queryAnswerDiv = document.getElementById('query-answer');
+            const queryLoading = document.getElementById('query-loading');
+            const queryError = document.getElementById('query-error');
+
+            const punchesTableBody = document.getElementById('punches-table-body');
+            const punchesLoading = document.getElementById('punches-loading');
+            const punchesError = document.getElementById('punches-error');
+            const applyFiltersBtn = document.getElementById('apply-filters-btn');
+            const disciplineFilter = document.getElementById('discipline-filter');
+            const itemTypeFilter = document.getElementById('item-type-filter');
+            const punchStatusFilter = document.getElementById('punch-status-filter');
+
+            const punchIdResolutionInput = document.getElementById('punch-id-resolution');
+            const newStatusResolutionSelect = document.getElementById('new-status-resolution');
+            const resolutionTextResolutionTextarea = document.getElementById('resolution-text-resolution');
+            const revisionResolutionInput = document.getElementById('revision-resolution');
+            const submitResolutionBtn = document.getElementById('submit-resolution-btn');
+            const resolutionLoading = document.getElementById('resolution-loading');
+            const resolutionError = document.getElementById('resolution-error');
+            const resolutionSuccess = document.getElementById('resolution-success');
+
+
+            const resolveModal = document.getElementById('resolve-modal');
+            const modalPunchIdInput = document.getElementById('modal-punch-id');
+            const modalNewStatusSelect = document.getElementById('modal-new-status');
+            const modalResolutionTextTextarea = document.getElementById('modal-resolution-text');
+            const modalRevisionInput = document.getElementById('modal-revision');
+            const modalSubmitResolutionBtn = document.getElementById('modal-submit-resolution-btn');
+            const modalResolutionLoading = document.getElementById('modal-resolution-loading');
+            const modalResolutionError = document.getElementById('modal-resolution-error');
+            const modalResolutionSuccess = document.getElementById('modal-resolution-success');
+
+            // Stat elements
+            const totalPunchesCount = document.getElementById('total-punches-count');
+            const openPunchesCount = document.getElementById('open-punches-count');
+            const resolvedPunchesCount = document.getElementById('resolved-punches-count');
+            const electricalPunchesCount = document.getElementById('electrical-punches-count');
+            const instrumentationPunchesCount = document.getElementById('analytics-instrumentation-punches-count'); // Using analytics tab IDs
+            const mechanicalPunchesCount = document.getElementById('analytics-mechanical-punches-count');
+            const civilPunchesCount = document.getElementById('analytics-civil-punches-count');
+
+             const analyticsTotalPunchesCount = document.getElementById('analytics-total-punches-count');
+             const analyticsOpenPunchesCount = document.getElementById('analytics-open-punches-count');
+             const analyticsResolvedPunchesCount = document.getElementById('analytics-resolved-punches-count');
+             const analyticsElectricalPunchesCount = document.getElementById('analytics-electrical-punches-count');
+
+
+            // Current language state (for potential future use in API calls/translations)
+            let currentLang = 'en';
+
+            // --- Helper Functions ---
+
+            function showLoading(element) { element.style.display = 'block'; }
+            function hideLoading(element) { element.style.display = 'none'; }
+            function showError(element, message) {
+                 console.error("Displaying error:", message);
+                 element.innerText = message;
+                 element.style.display = 'block';
+            }
+            function hideError(element) { element.style.display = 'none'; }
+             function showSuccess(element, message) {
+                console.log("Displaying success:", message);
+                element.innerText = message;
+                element.style.display = 'block';
+           }
+           function hideSuccess(element) { element.style.display = 'none'; }
+
+           function disableButton(button) { button.disabled = true; }
+           function enableButton(button) { button.disabled = false; }
+
+
+            // --- API Interaction Functions ---
+
+            async function fetchQuery(query) {
+                console.log("Fetching query:", query);
+                hideError(queryError);
+                queryAnswerDiv.innerText = ''; // Clear previous answer
+                showLoading(queryLoading);
+                disableButton(submitQueryBtn);
+
+
+                try {
+                    const response = await fetch(`${API_URL}/query`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query: query }),
+                    });
+
+                    if (!response.ok) {
+                         const errorDetail = await response.text(); // Get raw error text
+                         console.error("Query API Error Response:", errorDetail);
+                        throw new Error(`API error: ${response.status} ${response.statusText}. Details: ${errorDetail.substring(0, 200)}...`);
+                    }
+
+                    const data = await response.json();
+                    console.log("Query API Success Response:", data);
+                    queryAnswerDiv.innerText = data.answer || "No answer provided by RAG system."; // Handle potential empty answer
+
+                } catch (error) {
+                    console.error('Error fetching query:', error);
+                    showError(queryError, `${getTranslation('Error fetching query:', 'خطا در دریافت استعلام:')} ${error.message}`);
+                    queryAnswerDiv.innerText = getTranslation('Could not retrieve answer.', 'پاسخ قابل دریافت نیست.'); // Provide feedback even on error
+                } finally {
+                    hideLoading(queryLoading);
+                    enableButton(submitQueryBtn);
+                     // If coming from search, also hide search loading
+                     hideLoading(searchLoading);
+                }
+            }
+
+             // Search function now just wraps fetchQuery and provides UI feedback
+             async function executeSearch(searchTerm) {
+                console.log("Executing search:", searchTerm);
+                hideError(searchError);
+                searchRagAnswerDiv.innerText = ''; // Clear previous search result display
+                 searchResultsContainer.innerHTML = `<p id="search-placeholder">${getTranslation('Enter a query and click \'Search\'. The answer will appear in the Query tab.', 'عبارت جستجو را وارد کرده و روی \'جستجو\' کلیک کنید. پاسخ در تب "استعلام" نمایش داده خواهد شد.')}</p>`;
+                 searchPlaceholder.style.display = 'block'; // Show placeholder text
+                 hideSuccess(searchResultsContainer.querySelector('.success-message')); // Hide any old success
+                 showLoading(searchLoading); // Show search loading spinner
+                 disableButton(executeSearchBtn);
+
+
+                if (searchTerm.trim() === "") {
+                    hideLoading(searchLoading);
+                    enableButton(executeSearchBtn);
+                    searchPlaceholder.style.display = 'none'; // Hide placeholder if empty
+                    searchResultsContainer.innerHTML = `<p>${getTranslation('Please enter a search term.', 'لطفاً عبارت جستجو را وارد کنید.')}</p>`;
+                    return;
+                }
+
+                 // Display message redirecting user
+                 searchPlaceholder.innerText = getTranslation('Executing RAG query. See results in the "Query" tab.', 'درحال اجرای استعلام RAG. پاسخ را در تب "استعلام" مشاهده کنید.');
+                 searchPlaceholder.style.display = 'block';
+
+
+                 // Switch to Query tab automatically
+                 // openTab('query-tab'); // Auto-switching might be jarring
+
+                 // Just run the query and the answer will appear in the Query tab
+                 await fetchQuery(searchTerm);
+
+                 // Re-enable button and hide loading is handled in fetchQuery's finally block
+
+             }
+
+
+            async function fetchPunches(filters = {}) {
+                console.log("Fetching punches with filters:", filters);
+                hideError(punchesError);
+                showLoading(punchesLoading);
+                punchesTableBody.innerHTML = ''; // Clear table body
+                disableButton(applyFiltersBtn);
+
+
+                const params = new URLSearchParams();
+                if (filters.discipline) params.append('discipline', filters.discipline);
+                if (filters.item_type) params.append('item_type', filters.item_type);
+                if (filters.punch_status) params.append('punch_status', filters.punch_status);
+
+                try {
+                    const response = await fetch(`${API_URL}/punches?${params.toString()}`);
+
+                    if (!response.ok) {
+                         const errorDetail = await response.text(); // Get raw error text
+                         console.error("Punches API Error Response:", errorDetail);
+                        throw new Error(`API error: ${response.status} ${response.statusText}. Details: ${errorDetail.substring(0, 200)}...`);
+                    }
+
+                    const punches = await response.json();
+                    console.log("Punches API Success Response:", punches);
+                    renderPunchesTable(punches);
+                    updateStats(punches); // Update stats based on the received data
+                    // updateAnalytics(punches); // Update analytics based on the received data - currently just stats
+
+                } catch (error) {
+                    console.error('Error fetching punches:', error);
+                    showError(punchesError, `${getTranslation('Error loading punches:', 'خطا در بارگذاری پانچ‌ها:')} ${error.message}`);
+                    punchesTableBody.innerHTML = `<tr><td colspan="8">${getTranslation('Failed to load data.', 'بارگذاری داده ناموفق بود.')}</td></tr>`; // Show error in table area too
+                } finally {
+                    hideLoading(punchesLoading);
+                    enableButton(applyFiltersBtn);
+                }
+            }
+
+            async function submitPunchResolution(punchData, isModal = false) {
+                 console.log("Submitting punch resolution:", punchData, "Is Modal:", isModal);
+                 const loadingElement = isModal ? modalResolutionLoading : resolutionLoading;
+                 const errorElement = isModal ? modalResolutionError : resolutionError;
+                 const successElement = isModal ? modalResolutionSuccess : resolutionSuccess;
+                 const submitButton = isModal ? modalSubmitResolutionBtn : submitResolutionBtn;
+
+
+                 hideError(errorElement);
+                 hideSuccess(successElement);
+                 showLoading(loadingElement);
+                 disableButton(submitButton);
+
+
+                try {
+                     if (!punchData.punch_id || punchData.punch_id.trim() === "") throw new Error("Punch ID is required.");
+                     if (!punchData.revision || punchData.revision.trim() === "") throw new Error("Revision is required.");
+                     // new_status and resolution_text can be empty strings if backend allows
+
+                    const response = await fetch(`${API_URL}/punches/resolve`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(punchData),
+                    });
+
+                    if (!response.ok) {
+                         const errorDetail = await response.text(); // Get raw error text
+                         console.error("Resolution API Error Response:", errorDetail);
+                        throw new Error(`API error: ${response.status} ${response.statusText}. Details: ${errorDetail.substring(0, 200)}...`);
+                    }
+
+                    // Assuming the API returns {"status": "success"} on success
+                    const result = await response.json();
+                    console.log("Resolution API Success Response:", result);
+
+                    if (result.status === "success") {
+                        showSuccess(successElement, getTranslation('Resolution submitted successfully.', 'راه حل با موفقیت ثبت شد.'));
+                        if (isModal) {
+                            // Optionally close modal after a delay or upon user action
+                            setTimeout(closeModal, 1500); // Auto-close after 1.5 seconds
+                        } else {
+                             // Clear form on success if not modal
+                             punchIdResolutionInput.value = '';
+                             newStatusResolutionSelect.value = '1'; // Reset to default
+                             resolutionTextResolutionTextarea.value = '';
+                             revisionResolutionInput.value = '';
+                             // Success message remains visible until next action or tab switch
+                        }
+                        // Refresh the punches list after successful resolution
+                         const currentFilters = {
+                             discipline: disciplineFilter.value,
+                             item_type: itemTypeFilter.value,
+                             punch_status: punchStatusFilter.value
+                        };
+                         // Add a small delay before refetching to allow backend vectorstore rebuild
+                         setTimeout(() => {
+                             fetchPunches(currentFilters);
+                         }, 500);
+
+
+                    } else {
+                         // Handle API returning non-success status in the body
+                         throw new Error(`Resolution failed with status: ${result.status}`);
+                    }
+
+
+                } catch (error) {
+                    console.error('Error submitting resolution:', error);
+                     showError(errorElement, `${getTranslation('Error submitting resolution:', 'خطا در ثبت راه حل:')} ${error.message}`);
+                     hideSuccess(successElement); // Ensure success is hidden on error
+                } finally {
+                    hideLoading(loadingElement);
+                    enableButton(submitButton);
+                }
+            }
+
+
+            // --- UI Rendering Functions ---
+
+            function renderPunchesTable(punches) {
+                console.log("Rendering punches table with", punches.length, "items.");
+                punchesTableBody.innerHTML = ''; // Clear existing rows
+                if (!punches || punches.length === 0) {
+                    punchesTableBody.innerHTML = `<tr><td colspan="8">${getTranslation('No punches found matching criteria.', 'هیچ پانچی با معیارهای فیلتر مطابقت ندارد.')}</td></tr>`;
+                    return;
+                }
+
+                punches.forEach(punch => {
+                    const row = punchesTableBody.insertRow();
+
+                    // Helper to safely get cell value, showing '-' for 'None' or empty
+                    const getCellValue = (col) => {
+                         const value = punch[col];
+                         return (value === 'None' || value === '' || value === undefined) ? '-' : value;
+                    };
+
+                    row.insertCell().innerText = getCellValue('Punch ID');
+                    row.insertCell().innerText = getCellValue('Task Number');
+                     // Use 'Punch' for description based on setup() mapping in rag/core.py
+                    row.insertCell().innerText = getCellValue('Punch');
+                    row.insertCell().innerText = getCellValue('Item');
+                    row.insertCell().innerText = getCellValue('ItemType');
+
+                    const status = getCellValue('Punch Status');
+                    const statusCell = row.insertCell();
+                    statusCell.innerText = status;
+                    // Add class for styling based on status
+                    statusCell.classList.add(`punch-status-${status.toLowerCase()}`);
+
+
+                    row.insertCell().innerText = getCellValue('Disc');
+
+                    const actionsCell = row.insertCell();
+                    const resolveButton = document.createElement('button');
+                    resolveButton.innerText = getTranslation('Resolve', 'رفع'); // Localize button text
+                    resolveButton.onclick = () => openResolveModal(getCellValue('Punch ID'));
+                    actionsCell.appendChild(resolveButton);
+                });
+                 console.log("Punches table rendering complete.");
+            }
+
+             function updateStats(punches) {
+                 console.log("Updating stats with", punches.length, "punches.");
+                 const total = punches.length;
+                 const open = punches.filter(p => p['Punch Status'] === '0').length;
+                 const resolved = punches.filter(p => p['Punch Status'] === '1').length;
+                 const closed = punches.filter(p => p['Punch Status'] === '2').length;
+
+
+                 // Add other specific stats based on Disc
+                 const electrical = punches.filter(p => p['Disc'] === 'EL').length;
+                 const instrumentation = punches.filter(p => p['Disc'] === 'Ins').length;
+                 const mechanical = punches.filter(p => p['Disc'] === 'Mech').length;
+                 const civil = punches.filter(p => p['Disc'] === 'Civil').length;
+
+
+                 // Update Quick Stats (sidebar) - These should ideally show stats for *all* data, not filtered
+                 // To show stats for *all* data, we would need a separate API endpoint (e.g., /stats)
+                 // For now, they reflect the stats of the *currently filtered* list shown in the table.
+                 totalPunchesCount.innerText = total;
+                 openPunchesCount.innerText = open;
+                 resolvedPunchesCount.innerText = resolved;
+                 // Note: Quick stats only have space for 3, let's show Total, Open, Resolved
+                 // electricalPunchesCount.innerText = electrical; // Not displayed in quick stats grid
+
+
+                 // Update Analytics Stats (analytics tab) - These should ideally show stats for *all* data.
+                 // Since fetchPunches only fetches the *filtered* data, these stats will also reflect the filtered data.
+                 // To show global stats, refetch all punches or create a dedicated stats endpoint.
+                 analyticsTotalPunchesCount.innerText = total;
+                 analyticsOpenPunchesCount.innerText = open;
+                 analyticsResolvedPunchesCount.innerText = resolved;
+                 analyticsElectricalPunchesCount.innerText = electrical;
+                 instrumentationPunchesCount.innerText = instrumentation;
+                 mechanicalPunchesCount.innerText = mechanical;
+                 civilPunchesCount.innerText = civil;
+
+                 console.log("Stats updated.");
+
+                 // Chart placeholders remain placeholders unless a charting library is added.
+             }
+
+
+            // --- Tab Switching ---
+
+            function openTab(tabId) {
+                console.log("Switching to tab:", tabId);
+                const tabs = document.querySelectorAll('.tab');
+                tabs.forEach(tab => tab.classList.remove('active'));
+
+                const tabContents = document.querySelectorAll('.tab-content');
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                const targetTabButton = document.querySelector(`.tab[data-tab="${tabId}"]`);
+                if (targetTabButton) {
+                    targetTabButton.classList.add('active');
+                }
+
+                const targetTabContent = document.getElementById(tabId);
+                if (targetTabContent) {
+                    targetTabContent.classList.add('active');
+                }
+
+                // Special actions for specific tabs on open
+                if (tabId === 'punches-tab') {
+                    console.log("Punches tab opened. Fetching punches...");
+                    // Load punches when the Punches tab is opened
+                    const currentFilters = {
+                         discipline: disciplineFilter.value,
+                         item_type: itemTypeFilter.value,
+                         punch_status: punchStatusFilter.value
+                    };
+                    fetchPunches(currentFilters);
+                } else if (tabId === 'add-punch-tab') {
+                    console.log("Add Resolution tab opened. Clearing form messages.");
+                    // Clear resolution form messages when opening tab
+                    hideError(resolutionError);
+                    hideSuccess(resolutionSuccess);
+                } else if (tabId === 'analytics-tab') {
+                     console.log("Analytics tab opened.");
+                     // Analytics stats are updated by fetchPunches when Punches tab is viewed or filters applied.
+                     // To ensure analytics always shows *all* data stats, we'd need to fetch all data here
+                     // or have a dedicated stats endpoint. For now, it shows stats of the *last fetched* (likely filtered) list.
+                     // No extra fetch needed here unless analytics needs *all* data regardless of filters.
+                } else if (tabId === 'query-tab') {
+                    console.log("Query tab opened.");
+                     hideError(queryError);
+                     // Query results are persistent until a new query is made
+                } else if (tabId === 'search-tab') {
+                     console.log("Search tab opened.");
+                     hideError(searchError);
+                     // Search results (which are RAG query results) are persistent
+                }
+            }
+
+            // --- Modal Functions ---
+
+            function openResolveModal(punchId) {
+                console.log("Opening resolve modal for Punch ID:", punchId);
+                hideError(modalResolutionError);
+                hideSuccess(modalResolutionSuccess);
+                modalPunchIdInput.value = punchId;
+                modalNewStatusSelect.value = '1'; // Default status to Resolved (1)
+                modalResolutionTextTextarea.value = ''; // Clear previous text
+                // Optionally populate revision with current date/time or a sequential number
+                // Using a simple timestamp + random number for uniqueness example
+                 const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+                 const random = Math.floor(Math.random() * 1000);
+                 modalRevisionInput.value = `${timestamp}_${random}`;
+                 modalRevisionInput.placeholder = `e.g., ${modalRevisionInput.value}`;
+
+
+                resolveModal.style.display = 'block';
+            }
+
+            function closeModal() {
+                console.log("Closing resolve modal.");
+                resolveModal.style.display = 'none';
+                // Clear modal form? Maybe not needed if populated on open
+            }
+
+            // --- Language Toggle ---
+
+            // Simple placeholder for localization - requires more extensive mapping
+            const translations = {
+                'en': {
+                    'system-description': 'Equipment inspection and punch management system',
+                    'filters-heading': 'Filters',
+                    'discipline-filter-heading': 'Discipline',
+                    'item-type-filter-heading': 'Item Type',
+                    'punch-status-filter-heading': 'Punch Status',
+                    'quick-stats-heading': 'Quick Stats',
+                    'total-punches-stat': 'Total Punches',
+                    'open-punches-stat': 'Open Punches',
+                    'resolved-punches-stat': 'Resolved Punches',
+                    'electrical-punches-stat': 'Electrical Punches',
+                    'search-tab-btn': 'Search',
+                    'query-tab-btn': 'Query',
+                    'punches-tab-btn': 'Punches',
+                    'add-punch-tab-btn': 'Add Resolution',
+                    'analytics-tab-btn': 'Analytics',
+                    'search-heading': 'Search Punch List',
+                    'search-input': 'Search for punches, items, or tasks...',
+                    'execute-search-btn': 'Search',
+                    'search-results-heading': 'Search Results (Uses RAG Query)',
+                    'search-loading-text': 'Loading results...',
+                    'search-placeholder': 'Enter a query and click \'Search\'. The answer will appear in the Query tab.',
+                    'query-heading': 'Ask the RAG System',
+                    'query-label': 'Ask a question:',
+                    'query-input': 'Ask a question in English or Persian. For example: \'Show me all punches for item MSC COR CP-A48/A.R\' or \'چه تعداد پانچ با وضعیت 0 داریم؟\'',
+                    'submit-query-btn': 'Submit Query',
+                    'query-loading-text': 'Processing query...',
+                    'answer-heading': 'Answer:',
+                    'punches-heading': 'All Punches',
+                    'punches-loading-text': 'Loading punches...',
+                    'punch-id-col-header': 'Punch ID',
+                    'task-number-col-header': 'Task Number',
+                    'description-col-header': 'Description',
+                    'item-col-header': 'Item',
+                    'item-type-col-header': 'Item Type',
+                    'status-col-header': 'Status',
+                    'discipline-col-header': 'Discipline',
+                    'actions-col-header': 'Actions',
+                    'add-resolution-heading': 'Add Punch Resolution',
+                    'punch-id-resolution-label': 'Punch ID to Resolve:',
+                    'new-status-resolution-label': 'New Status:',
+                    'resolution-text-resolution-label': 'Resolution Description:',
+                    'revision-resolution-label': 'Revision:',
+                    'submit-resolution-btn': 'Submit Resolution',
+                    'resolution-loading-text': 'Processing resolution...',
+                    'resolution-success-heading': 'Resolution Success',
+                    'resolution-success-text': 'The punch resolution has been successfully added to the system.',
+                    'analytics-heading': 'Analytics Dashboard',
+                    'analytics-total-punches-stat': 'Total Punches',
+                    'analytics-open-punches-stat': 'Open Punches',
+                    'analytics-resolved-punches-stat': 'Resolved Punches',
+                    'analytics-electrical-punches-stat': 'Electrical Punches',
+                    'analytics-instrumentation-punches-stat': 'Instrumentation Punches',
+                    'analytics-mechanical-punches-stat': 'Mechanical Punches',
+                    'analytics-civil-punches-stat': 'Civil Punches',
+                    'punches-by-type-heading': 'Punches by Type (Requires Charting Library)',
+                    'punches-by-item-type-heading': 'Punches by Item Type (Requires Charting Library)',
+                    'modal-resolve-heading': 'Resolve Punch',
+                    'modal-punch-id-label': 'Punch ID:',
+                    'modal-new-status-label': 'New Status:',
+                    'modal-resolution-text-label': 'Resolution Description:',
+                    'modal-revision-label': 'Revision:',
+                    'modal-submit-resolution-btn': 'Submit Resolution',
+                    'modal-resolution-loading-text': 'Processing resolution...',
+                     'modal-resolution-success': 'Resolution submitted successfully.',
+                     'Resolve': 'Resolve', // Resolve button text
+                     'Error fetching query:': 'Error fetching query:',
+                     'Could not retrieve answer.': 'Could not retrieve answer.',
+                     'Error loading punches:': 'Error loading punches:',
+                     'Failed to load data.': 'Failed to load data.',
+                     'Error submitting resolution:': 'Error submitting resolution:',
+                     'No punches found matching criteria.': 'No punches found matching criteria.',
+                     'Executing RAG query. See results in the "Query" tab.': 'Executing RAG query. See results in the "Query" tab.',
+                     'Please enter a search term.': 'Please enter a search term.'
+
+                },
+                'fa': {
+                    'system-description': 'سیستم مدیریت بازرسی تجهیزات و پانچ',
+                    'filters-heading': 'فیلترها',
+                    'discipline-filter-heading': 'دیسیپلین',
+                    'item-type-filter-heading': 'نوع آیتم',
+                    'punch-status-filter-heading': 'وضعیت پانچ',
+                    'quick-stats-heading': 'آمار سریع',
+                    'total-punches-stat': 'کل پانچ‌ها',
+                    'open-punches-stat': 'پانچ‌های باز',
+                    'resolved-punches-stat': 'پانچ‌های رفع شده',
+                    'electrical-punches-stat': 'پانچ‌های برق',
+                    'search-tab-btn': 'جستجو',
+                    'query-tab-btn': 'استعلام',
+                    'punches-tab-btn': 'پانچ‌ها',
+                    'add-punch-tab-btn': 'افزودن راه حل',
+                    'analytics-tab-btn': 'تحلیل‌ها',
+                    'search-heading': 'جستجو در لیست پانچ',
+                    'search-input': 'جستجو برای پانچ‌ها، آیتم‌ها یا وظایف...',
+                    'execute-search-btn': 'جستجو',
+                    'search-results-heading': 'نتایج جستجو (از استعلام RAG)',
+                    'search-loading-text': 'درحال بارگذاری نتایج...',
+                     'search-placeholder': 'عبارت جستجو را وارد کرده و روی \'جستجو\' کلیک کنید. پاسخ در تب "استعلام" نمایش داده خواهد شد.',
+                    'query-heading': 'پرسش از سیستم RAG',
+                    'query-label': 'سوال خود را بپرسید:',
+                    'query-input': 'سوال خود را به انگلیسی یا فارسی بپرسید. مثال: \'Show me all punches for item MSC COR CP-A48/A.R\' یا \'چه تعداد پانچ با وضعیت 0 داریم؟\'',
+                    'submit-query-btn': 'ارسال استعلام',
+                    'query-loading-text': 'درحال پردازش استعلام...',
+                    'answer-heading': 'پاسخ:',
+                    'punches-heading': 'همه پانچ‌ها',
+                    'punches-loading-text': 'درحال بارگذاری پانچ‌ها...',
+                    'punch-id-col-header': 'کد پانچ',
+                    'task-number-col-header': 'شماره وظیفه',
+                    'description-col-header': 'شرح',
+                    'item-col-header': 'آیتم',
+                    'item-type-col-header': 'نوع آیتم',
+                    'status-col-header': 'وضعیت',
+                    'discipline-col-header': 'دیسیپلین',
+                    'actions-col-header': 'عملیات',
+                    'add-resolution-heading': 'افزودن راه حل پانچ',
+                    'punch-id-resolution-label': 'کد پانچ برای رفع:',
+                    'new-status-resolution-label': 'وضعیت جدید:',
+                    'resolution-text-resolution-label': 'شرح راه حل:',
+                    'revision-resolution-label': 'ویرایش:',
+                    'submit-resolution-btn': 'ثبت راه حل',
+                    'resolution-loading-text': 'درحال پردازش راه حل...',
+                    'resolution-success-heading': 'راه حل با موفقیت ثبت شد',
+                    'resolution-success-text': 'راه حل پانچ با موفقیت در سیستم ثبت شد.',
+                    'analytics-heading': 'داشبورد تحلیل‌ها',
+                    'analytics-total-punches-stat': 'کل پانچ‌ها',
+                    'analytics-open-punches-stat': 'پانچ‌های باز',
+                    'analytics-resolved-punches-stat': 'پانچ‌های رفع شده',
+                    'analytics-electrical-punches-stat': 'پانچ‌های برق',
+                     'analytics-instrumentation-punches-stat': 'پانچ‌های ابزار دقیق',
+                     'analytics-mechanical-punches-stat': 'پانچ‌های مکانیک',
+                     'analytics-civil-punches-stat': 'پانچ‌های عمران',
+                    'punches-by-type-heading': 'پانچ‌ها بر اساس نوع (نیاز به کتابخانه نمودار)',
+                    'punches-by-item-type-heading': 'پانچ‌ها بر اساس نوع آیتم (نیاز به کتابخانه نمودار)',
+                     'modal-resolve-heading': 'رفع پانچ',
+                    'modal-punch-id-label': 'کد پانچ:',
+                    'modal-new-status-label': 'وضعیت جدید:',
+                    'modal-resolution-text-label': 'شرح راه حل:',
+                    'modal-revision-label': 'ویرایش:',
+                    'modal-submit-resolution-btn': 'ثبت راه حل',
+                    'modal-resolution-loading-text': 'درحال پردازش راه حل...',
+                     'modal-resolution-success': 'راه حل با موفقیت ثبت شد.',
+                     'Resolve': 'رفع', // Resolve button text
+                     'Error fetching query:': 'خطا در دریافت استعلام:',
+                     'Could not retrieve answer.': 'پاسخ قابل دریافت نیست.',
+                      'Error loading punches:': 'خطا در بارگذاری پانچ‌ها:',
+                      'Failed to load data.': 'بارگذاری داده ناموفق بود.',
+                      'Error submitting resolution:': 'خطا در ثبت راه حل:',
+                      'No punches found matching criteria.': 'هیچ پانچی با معیارهای فیلتر مطابقت ندارد.',
+                      'Executing RAG query. See results in the "Query" tab.': 'درحال اجرای استعلام RAG. پاسخ در تب "استعلام" نمایش داده خواهد شد.',
+                      'Please enter a search term.': 'لطفاً عبارت جستجو را وارد کنید.'
+                }
+            };
+
+             function getTranslation(key, defaultText) {
+                 return translations[currentLang][key] || defaultText;
+             }
+
+            function applyTranslation(lang) {
+                currentLang = lang;
+                document.body.style.direction = (lang === 'fa') ? 'rtl' : 'ltr';
+                document.title = getTranslation('Equipment Inspection RAG System', 'Equipment Inspection RAG System');
+
+                // Get all elements with translation keys (if you added data-lang-key attributes)
+                // Or manually update known elements as below
+                document.getElementById('system-description').innerText = getTranslation('system-description', 'Equipment inspection and punch management system');
+                document.getElementById('filters-heading').innerText = getTranslation('filters-heading', 'Filters');
+                document.getElementById('discipline-filter-heading').innerText = getTranslation('discipline-filter-heading', 'Discipline');
+                document.getElementById('item-type-filter-heading').innerText = getTranslation('item-type-filter-heading', 'Item Type');
+                document.getElementById('punch-status-filter-heading').innerText = getTranslation('punch-status-filter-heading', 'Punch Status');
+                document.getElementById('quick-stats-heading').innerText = getTranslation('quick-stats-heading', 'Quick Stats');
+                document.getElementById('total-punches-stat').innerText = getTranslation('total-punches-stat', 'Total Punches');
+                document.getElementById('open-punches-stat').innerText = getTranslation('open-punches-stat', 'Open Punches');
+                document.getElementById('resolved-punches-stat').innerText = getTranslation('resolved-punches-stat', 'Resolved Punches');
+                document.getElementById('electrical-punches-stat').innerText = getTranslation('electrical-punches-stat', 'Electrical Punches');
+
+                document.getElementById('search-tab-btn').innerText = getTranslation('search-tab-btn', 'Search');
+                document.getElementById('query-tab-btn').innerText = getTranslation('query-tab-btn', 'Query');
+                document.getElementById('punches-tab-btn').innerText = getTranslation('punches-tab-btn', 'Punches');
+                document.getElementById('add-punch-tab-btn').innerText = getTranslation('add-punch-tab-btn', 'Add Resolution');
+                document.getElementById('analytics-tab-btn').innerText = getTranslation('analytics-tab-btn', 'Analytics');
+
+                document.getElementById('search-heading').innerText = getTranslation('search-heading', 'Search Punch List');
+                document.getElementById('search-input').placeholder = getTranslation('search-input', 'Search for punches, items, or tasks...');
+                document.getElementById('execute-search-btn').innerText = getTranslation('execute-search-btn', 'Search');
+                document.getElementById('search-results-heading').innerText = getTranslation('search-results-heading', 'Search Results (Uses RAG Query)');
+                document.getElementById('search-loading-text').innerText = getTranslation('search-loading-text', 'Loading results...');
+                document.getElementById('search-placeholder').innerText = getTranslation('search-placeholder', 'Enter a query and click \'Search\'. The answer will appear in the Query tab.');
+
+
+                document.getElementById('query-heading').innerText = getTranslation('query-heading', 'Ask the RAG System');
+                document.getElementById('query-label').innerText = getTranslation('query-label', 'Ask a question:');
+                document.getElementById('query-input-textarea').placeholder = getTranslation('query-input', 'Ask a question in English or Persian. For example: \'Show me all punches for item MSC COR CP-A48/A.R\' or \'چه تعداد پانچ با وضعیت 0 داریم؟\''); // Corrected ID
+                document.getElementById('submit-query-btn').innerText = getTranslation('submit-query-btn', 'Submit Query');
+                document.getElementById('query-loading-text').innerText = getTranslation('query-loading-text', 'Processing query...');
+                document.getElementById('answer-heading').innerText = getTranslation('answer-heading', 'Answer:');
+
+                document.getElementById('punches-heading').innerText = getTranslation('punches-heading', 'All Punches');
+                document.getElementById('punches-loading-text').innerText = getTranslation('punches-loading-text', 'Loading punches...');
+                document.getElementById('punch-id-col-header').innerText = getTranslation('punch-id-col-header', 'Punch ID');
+                document.getElementById('task-number-col-header').innerText = getTranslation('task-number-col-header', 'Task Number');
+                document.getElementById('description-col-header').innerText = getTranslation('description-col-header', 'Description');
+                document.getElementById('item-col-header').innerText = getTranslation('item-col-header', 'Item');
+                document.getElementById('item-type-col-header').innerText = getTranslation('item-type-col-header', 'Item Type');
+                document.getElementById('status-col-header').innerText = getTranslation('status-col-header', 'Status');
+                 document.getElementById('discipline-col-header').innerText = getTranslation('discipline-col-header', 'Discipline');
+                document.getElementById('actions-col-header').innerText = getTranslation('actions-col-header', 'Actions');
+                // Need to re-render table rows for localized 'Resolve' button text
+                 const currentFilters = {
+                             discipline: disciplineFilter.value,
+                             item_type: itemTypeFilter.value,
+                             punch_status: punchStatusFilter.value
+                        };
+                 // Re-fetch or re-render if data is available
+                 if(punchesTableBody.rows.length > 0 && punchesTableBody.rows[0].cells.length > 1) { // Check if table has data rows
+                     // Ideally, re-render the current data, but fetching is simpler if inefficient
+                     fetchPunches(currentFilters);
+                 }
+
+
+                document.getElementById('add-resolution-heading').innerText = getTranslation('add-resolution-heading', 'Add Punch Resolution');
+                document.getElementById('punch-id-resolution-label').innerText = getTranslation('punch-id-resolution-label', 'Punch ID to Resolve:');
+                document.getElementById('new-status-resolution-label').innerText = getTranslation('new-status-resolution-label', 'New Status:');
+                document.getElementById('resolution-text-resolution-label').innerText = getTranslation('resolution-text-resolution-label', 'Resolution Description:');
+                document.getElementById('revision-resolution-label').innerText = getTranslation('revision-resolution-label', 'Revision:');
+                document.getElementById('submit-resolution-btn').innerText = getTranslation('submit-resolution-btn', 'Submit Resolution');
+                document.getElementById('resolution-loading-text').innerText = getTranslation('resolution-loading-text', 'Processing resolution...');
+                document.getElementById('resolution-success-heading').innerText = getTranslation('resolution-success-heading', 'Resolution Success');
+                document.getElementById('resolution-success-text').innerText = getTranslation('resolution-success-text', 'The punch resolution has been successfully added to the system.');
+
+
+                 document.getElementById('analytics-heading').innerText = getTranslation('analytics-heading', 'Analytics Dashboard');
+                 document.getElementById('analytics-total-punches-stat').innerText = getTranslation('analytics-total-punches-stat', 'Total Punches');
+                 document.getElementById('analytics-open-punches-stat').innerText = getTranslation('analytics-open-punches-stat', 'Open Punches');
+                 document.getElementById('analytics-resolved-punches-stat').innerText = getTranslation('analytics-resolved-punches-stat', 'Resolved Punches');
+                 document.getElementById('analytics-electrical-punches-stat').innerText = getTranslation('analytics-electrical-punches-stat', 'Electrical Punches');
+                 document.getElementById('analytics-instrumentation-punches-stat').innerText = getTranslation('analytics-instrumentation-punches-stat', 'Instrumentation Punches');
+                  document.getElementById('analytics-mechanical-punches-stat').innerText = getTranslation('analytics-mechanical-punches-stat', 'Mechanical Punches');
+                 document.getElementById('analytics-civil-punches-stat').innerText = getTranslation('analytics-civil-punches-stat', 'Civil Punches');
+
+                 document.getElementById('punches-by-type-heading').innerText = getTranslation('punches-by-type-heading', 'Punches by Type (Placeholder)');
+                 document.getElementById('punches-by-item-type-heading').innerText = getTranslation('punches-by-item-type-heading', 'Punches by Item Type (Placeholder)');
+
+                 // Update placeholder texts inside chart containers
+                 document.querySelector('#chart-by-type p').innerText = getTranslation('punches-by-type-heading', 'Punches by Type (Requires Charting Library)').replace(' (Requires Charting Library)', '') + getTranslation(' (Requires Charting Library)', '');
+                 document.querySelector('#chart-by-item-type p').innerText = getTranslation('punches-by-item-type-heading', 'Punches by Item Type (Requires Charting Library)').replace(' (Requires Charting Library)', '') + getTranslation(' (Requires Charting Library)', '');
+
+
+                 document.getElementById('modal-resolve-heading').innerText = getTranslation('modal-resolve-heading', 'Resolve Punch');
+                 document.getElementById('modal-punch-id-label').innerText = getTranslation('modal-punch-id-label', 'Punch ID:');
+                 document.getElementById('modal-new-status-label').innerText = getTranslation('modal-new-status-label', 'New Status:');
+                 document.getElementById('modal-resolution-text-label').innerText = getTranslation('modal-resolution-text-label', 'Resolution Description:');
+                 document.getElementById('modal-revision-label').innerText = getTranslation('modal-revision-label', 'Revision:');
+                 document.getElementById('modal-submit-resolution-btn').innerText = getTranslation('modal-submit-resolution-btn', 'Submit Resolution');
+                 document.getElementById('modal-resolution-loading-text').innerText = getTranslation('modal-resolution-loading-text', 'Processing resolution...');
+                 document.getElementById('modal-resolution-success').innerText = getTranslation('modal-resolution-success', 'Resolution submitted successfully.');
+
+                console.log(`Language switched to ${lang}.`);
+            }
+
+
+            // --- Event Listeners ---
+
+            // Tab buttons
+            document.querySelectorAll('.tab').forEach(button => {
+                button.addEventListener('click', () => {
+                    openTab(button.getAttribute('data-tab'));
+                });
+            });
+
+
+            // Search button
+            executeSearchBtn.addEventListener('click', () => {
+                executeSearch(searchInput.value);
+            });
+            // Allow pressing Enter in search box
+             searchInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault(); // Prevent default form submission if it were a form
+                    executeSearchBtn.click(); // Trigger button click
+                }
+            });
+
+
+            // Query button
+            submitQueryBtn.addEventListener('click', () => {
+                fetchQuery(queryInputTextarea.value); // Corrected ID
+            });
+             // Allow pressing Enter (or Ctrl+Enter for multiline) in query textarea
+             queryInputTextarea.addEventListener('keypress', function(event) { // Corrected ID
+                 if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey) { // Basic Enter
+                      event.preventDefault();
+                      submitQueryBtn.click(); // Trigger button click
+                  } else if (event.key === 'Enter' && (event.shiftKey || event.ctrlKey)) {
+                     // Allow Shift+Enter or Ctrl+Enter for new line
+                  }
+             });
+
+
+            // Apply Filters button
+            applyFiltersBtn.addEventListener('click', () => {
+                const filters = {
+                    discipline: disciplineFilter.value,
+                    item_type: itemTypeFilter.value,
+                    punch_status: punchStatusFilter.value,
+                    // Removed punch_type filter as per backend implementation
+                };
+                fetchPunches(filters);
+            });
+
+
+            // Submit Resolution button (Add Resolution tab)
+            submitResolutionBtn.addEventListener('click', () => {
+                const punchData = {
+                    punch_id: punchIdResolutionInput.value.trim(),
+                    new_status: newStatusResolutionSelect.value,
+                    resolution_text: resolutionTextResolutionTextarea.value.trim(),
+                    revision: revisionResolutionInput.value.trim(),
+                };
+                submitPunchResolution(punchData, false); // Pass false for not a modal
+            });
+
+            // Submit Resolution button (Modal)
+            modalSubmitResolutionBtn.addEventListener('click', () => {
+                const punchData = {
+                    punch_id: modalPunchIdInput.value.trim(),
+                    new_status: modalNewStatusSelect.value,
+                    resolution_text: modalResolutionTextTextarea.value.trim(),
+                    revision: modalRevisionInput.value.trim(),
+                };
+                submitPunchResolution(punchData, true); // Pass true for modal
+            });
+
+
+            // Modal close button and outside click
+            document.querySelector('#resolve-modal .close').addEventListener('click', closeModal);
+             window.addEventListener('click', (event) => {
+                if (event.target === resolveModal) {
+                    closeModal();
+                }
+            });
+
+            // Language buttons
+            document.querySelectorAll('.language-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    applyTranslation(button.getAttribute('data-lang'));
+                });
+            });
+
+
+            // --- Initial Setup ---
+
+            // Apply default language (English) on load
+            applyTranslation('en');
+
+            // Load initial data when the page loads (e.g., open the Punches tab)
+            // This will trigger fetchPunches automatically
+             openTab('punches-tab');
+
+
+        }); // End of DOMContentLoaded
+    </script>
+</body>
+</html>
