@@ -1,4 +1,3 @@
-# main.py
 import webbrowser
 import uvicorn
 import threading
@@ -14,18 +13,18 @@ def run_api():
 
 # Function to open browser
 def open_browser():
-    webbrowser.open_new("http://localhost:8080")
+    webbrowser.open_new("http://localhost:8081")
 
 if __name__ == "__main__":
     # Start API in a thread
     threading.Thread(target=run_api, daemon=True).start()
-
+    
     # Open web UI
     open_browser()
-
+    
     print("RAG backend is running at http://localhost:8008")
-    print("UI is opening at http://localhost:8080")
-
+    print("UI is opening at http://localhost:8081")
+    
     # Keep the main thread alive
     try:
         while True:
