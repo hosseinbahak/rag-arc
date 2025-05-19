@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Equipment Inspection RAG System</title>
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
        /* Keep existing styles */
        :root {
@@ -123,6 +125,10 @@
            margin-bottom: 10px;
            border: 1px solid #ddd;
            border-radius: var(--border-radius);
+       }
+
+       .form-group textarea {
+           height: 100px;
        }
 
        .result-item {
@@ -271,18 +277,30 @@
        .chart-container {
            height: 300px;
            margin-bottom: 20px;
-           display: flex; /* Center content */
-           align-items: center;
-           justify-content: center;
+           /* Remove flex centering for canvas */
+           display: block;
             background-color: #f8f9fa; /* Add a background */
             border-radius: var(--border-radius);
             border: 1px solid #ddd;
+             padding: 10px; /* Add some padding inside the container */
        }
+        .chart-container canvas {
+            display: block; /* Canvas should be block */
+             width: 100% !important; /* Chart.js needs this for proper resizing */
+             height: 100% !important; /* Chart.js needs this for proper resizing */
+        }
+        .chart-placeholder {
+            text-align: center;
+            color: #666; /* Muted text color */
+            font-style: italic;
+            margin-top: 50px; /* Center vertically */
+        }
 
-       /* Placeholder SVG styles */
-       .chart-container svg rect, .chart-container svg circle {
-           shape-rendering: crispEdges; /* Make bars sharp */
-       }
+
+       /* Placeholder SVG styles (no longer needed if using canvas) */
+       /* .chart-container svg rect, .chart-container svg circle {
+           shape-rendering: crispEdges;
+       } */
 
        .stats-grid {
            display: grid;
@@ -368,7 +386,7 @@
        }
 
        .close:hover,
-       .close:focus {
+       cell:focus {
            color: black;
            text-decoration: none;
        }
@@ -543,7 +561,7 @@
                         <!-- Search results populated dynamically -->
                          <p id="search-placeholder">Enter a query and click 'Search'. The answer will appear in the Query tab.</p>
                          <!-- Adding dynamic results area if needed -->
-                          <div id="search-rag-answer"></div>
+                          <div id="search-rag-answer"></div> <!-- This doesn't display RAG answer per JS logic -->
                     </div>
                 </div>
 
@@ -551,7 +569,8 @@
                 <div id="query-tab" class="tab-content">
                     <h2 id="query-heading">Ask the RAG System</h2>
                     <div class="form-group">
-                        <label for="query-input" id="query-label">Ask a question:</label>
+                        <!-- Corrected 'for' attribute to match textarea ID -->
+                        <label for="query-input-textarea" id="query-label">Ask a question:</label>
                         <textarea id="query-input-textarea" placeholder="Ask a question in English or Persian. For example: 'Show me all punches for item MSC COR CP-A48/A.R' or 'چه تعداد پانچ با وضعیت 0 داریم؟'"></textarea>
                     </div>
                     <button id="submit-query-btn">Submit Query</button>
@@ -643,10 +662,7 @@
                     </div>
                     <div class="error-message" id="resolution-error"></div>
                     <div class="success-message" id="resolution-success">
-                        <div class="card">
-                            <h3 id="resolution-success-heading">Resolution Success</h3>
-                            <p id="resolution-success-text">The punch resolution has been successfully added to the system.</p>
-                        </div>
+                         <!-- Success message text will be set by JS -->
                     </div>
                 </div>
 
@@ -689,14 +705,18 @@
                     <div class="card">
                         <h3 id="punches-by-type-heading">Punches by Type (Requires Charting Library)</h3>
                         <div class="chart-container" id="chart-by-type">
-                            <p>This section is a placeholder. Implementing charts requires integrating a JavaScript charting library (like Chart.js) and preparing the data accordingly.</p>
+                             <!-- Replace placeholder p with canvas -->
+                             <canvas id="punchesByTypeChart"></canvas>
+                             <p class="chart-placeholder">This section is a placeholder. Implementing charts requires integrating a JavaScript charting library (like Chart.js) and preparing the data accordingly.</p>
                         </div>
                     </div>
 
                     <div class="card">
                         <h3 id="punches-by-item-type-heading">Punches by Item Type (Requires Charting Library)</h3>
                         <div class="chart-container" id="chart-by-item-type">
-                             <p>This section is a placeholder. Implementing charts requires integrating a JavaScript charting library (like Chart.js) and preparing the data accordingly.</p>
+                             <!-- Replace placeholder p with canvas -->
+                             <canvas id="punchesByItemTypeChart"></canvas>
+                             <p class="chart-placeholder">This section is a placeholder. Implementing charts requires integrating a JavaScript charting library (like Chart.js) and preparing the data accordingly.</p>
                         </div>
                     </div>
                 </div>
@@ -707,7 +727,7 @@
     <!-- Resolve Punch Modal -->
     <div id="resolve-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close" onclick="closeModal()">×</span>
             <h2 id="modal-resolve-heading">Resolve Punch</h2>
             <div class="form-section">
                 <div class="form-group">
@@ -752,7 +772,10 @@
             console.log("DOM fully loaded. Initializing...");
 
             // --- Global Variables and Constants ---
-            const API_URL = 'http://localhost:8000'; // The backend FastAPI URL
+            const API_URL = ''; // FastAPI serves HTML from root, so API calls are relative or just '/'
+                                // Let's use empty string or '/' for relative paths.
+                                // Using '' makes requests like '/query', '/punches', etc.
+                                // If FastAPI was serving statics from '/static', you might use '/api' prefix for endpoints
 
             // UI Elements (Get elements correctly by ID - corrected queryInput ID)
             const searchInput = document.getElementById('search-input');
@@ -761,7 +784,7 @@
             const searchLoading = document.getElementById('search-loading');
             const searchError = document.getElementById('search-error');
             const searchPlaceholder = document.getElementById('search-placeholder');
-            const searchRagAnswerDiv = document.getElementById('search-rag-answer'); // Added for displaying RAG answer in search
+            const searchRagAnswerDiv = document.getElementById('search-rag-answer'); // Added for displaying RAG answer in search - *Note: Current logic puts answer in Query tab*
 
             const queryInputTextarea = document.getElementById('query-input-textarea'); // Corrected ID
             const submitQueryBtn = document.getElementById('submit-query-btn');
@@ -797,19 +820,32 @@
             const modalResolutionError = document.getElementById('modal-resolution-error');
             const modalResolutionSuccess = document.getElementById('modal-resolution-success');
 
-            // Stat elements
+            // Stat elements (Analytics tab IDs used for analytics section)
+             // Quick Stats elements
             const totalPunchesCount = document.getElementById('total-punches-count');
             const openPunchesCount = document.getElementById('open-punches-count');
             const resolvedPunchesCount = document.getElementById('resolved-punches-count');
-            const electricalPunchesCount = document.getElementById('electrical-punches-count');
-            const instrumentationPunchesCount = document.getElementById('analytics-instrumentation-punches-count'); // Using analytics tab IDs
-            const mechanicalPunchesCount = document.getElementById('analytics-mechanical-punches-count');
-            const civilPunchesCount = document.getElementById('analytics-civil-punches-count');
+            const electricalPunchesCount = document.getElementById('electrical-punches-count'); // Quick stat
 
+            // Analytics Stats elements
              const analyticsTotalPunchesCount = document.getElementById('analytics-total-punches-count');
              const analyticsOpenPunchesCount = document.getElementById('analytics-open-punches-count');
              const analyticsResolvedPunchesCount = document.getElementById('analytics-resolved-punches-count');
              const analyticsElectricalPunchesCount = document.getElementById('analytics-electrical-punches-count');
+             const instrumentationPunchesCount = document.getElementById('analytics-instrumentation-punches-count');
+             const mechanicalPunchesCount = document.getElementById('analytics-mechanical-punches-count');
+             const civilPunchesCount = document.getElementById('analytics-civil-punches-count');
+
+             // Chart Canvas Elements
+             const punchesByTypeCanvas = document.getElementById('punchesByTypeChart');
+             const punchesByItemTypeCanvas = document.getElementById('punchesByItemTypeChart');
+             const punchesByTypePlaceholder = document.querySelector('#chart-by-type .chart-placeholder');
+             const punchesByItemTypePlaceholder = document.querySelector('#chart-by-item-type .chart-placeholder');
+
+
+             // Chart Instances (will be initialized later)
+             let punchesByTypeChartInstance = null;
+             let punchesByItemTypeChartInstance = null;
 
 
             // Current language state (for potential future use in API calls/translations)
@@ -827,7 +863,14 @@
             function hideError(element) { element.style.display = 'none'; }
              function showSuccess(element, message) {
                 console.log("Displaying success:", message);
-                element.innerText = message;
+                 // Check if the element is a card or just text
+                 if (element.classList.contains('card')) {
+                     // Update text within the card, assuming it has a paragraph or div for text
+                     const textElement = element.querySelector('p') || element.querySelector('div') || element;
+                     textElement.innerText = message;
+                 } else {
+                     element.innerText = message;
+                 }
                 element.style.display = 'block';
            }
            function hideSuccess(element) { element.style.display = 'none'; }
@@ -844,6 +887,10 @@
                 queryAnswerDiv.innerText = ''; // Clear previous answer
                 showLoading(queryLoading);
                 disableButton(submitQueryBtn);
+
+                // Also hide search loading if triggered from search
+                hideLoading(searchLoading); // Hide search loading spinner if it was shown
+                enableButton(executeSearchBtn); // Re-enable search button
 
 
                 try {
@@ -863,7 +910,7 @@
 
                     const data = await response.json();
                     console.log("Query API Success Response:", data);
-                    queryAnswerDiv.innerText = data.answer || "No answer provided by RAG system."; // Handle potential empty answer
+                    queryAnswerDiv.innerText = data.answer || getTranslation("No answer provided by RAG system.", "سیستم RAG پاسخی ارائه نداد."); // Handle potential empty answer and localize
 
                 } catch (error) {
                     console.error('Error fetching query:', error);
@@ -872,8 +919,6 @@
                 } finally {
                     hideLoading(queryLoading);
                     enableButton(submitQueryBtn);
-                     // If coming from search, also hide search loading
-                     hideLoading(searchLoading);
                 }
             }
 
@@ -881,35 +926,28 @@
              async function executeSearch(searchTerm) {
                 console.log("Executing search:", searchTerm);
                 hideError(searchError);
-                searchRagAnswerDiv.innerText = ''; // Clear previous search result display
-                 searchResultsContainer.innerHTML = `<p id="search-placeholder">${getTranslation('Enter a query and click \'Search\'. The answer will appear in the Query tab.', 'عبارت جستجو را وارد کرده و روی \'جستجو\' کلیک کنید. پاسخ در تب "استعلام" نمایش داده خواهد شد.')}</p>`;
-                 searchPlaceholder.style.display = 'block'; // Show placeholder text
-                 hideSuccess(searchResultsContainer.querySelector('.success-message')); // Hide any old success
+                 // Clear previous search specific results/placeholders
+                searchRagAnswerDiv.innerText = '';
+                 searchPlaceholder.style.display = 'none'; // Hide initial placeholder
+
+
+                 if (searchTerm.trim() === "") {
+                     searchResultsContainer.innerHTML = `<p>${getTranslation('Please enter a search term.', 'لطفاً عبارت جستجو را وارد کنید.')}</p>`;
+                     return;
+                 }
+
+                 // Display message redirecting user and show loading
+                 searchResultsContainer.innerHTML = `<p>${getTranslation('Executing RAG query. See results in the "Query" tab.', 'درحال اجرای استعلام RAG. پاسخ را در تب "استعلام" مشاهده کنید.')}</p>`;
                  showLoading(searchLoading); // Show search loading spinner
                  disableButton(executeSearchBtn);
 
-
-                if (searchTerm.trim() === "") {
-                    hideLoading(searchLoading);
-                    enableButton(executeSearchBtn);
-                    searchPlaceholder.style.display = 'none'; // Hide placeholder if empty
-                    searchResultsContainer.innerHTML = `<p>${getTranslation('Please enter a search term.', 'لطفاً عبارت جستجو را وارد کنید.')}</p>`;
-                    return;
-                }
-
-                 // Display message redirecting user
-                 searchPlaceholder.innerText = getTranslation('Executing RAG query. See results in the "Query" tab.', 'درحال اجرای استعلام RAG. پاسخ را در تب "استعلام" مشاهده کنید.');
-                 searchPlaceholder.style.display = 'block';
-
-
-                 // Switch to Query tab automatically
-                 // openTab('query-tab'); // Auto-switching might be jarring
-
-                 // Just run the query and the answer will appear in the Query tab
+                 // Run the query. The answer will appear in the Query tab.
+                 // fetchQuery handles its own loading/button state and error display.
                  await fetchQuery(searchTerm);
 
-                 // Re-enable button and hide loading is handled in fetchQuery's finally block
-
+                 // After fetchQuery finishes, re-enable search button and hide search loading
+                 hideLoading(searchLoading);
+                 enableButton(executeSearchBtn);
              }
 
 
@@ -922,7 +960,7 @@
 
 
                 const params = new URLSearchParams();
-                if (filters.discipline) params.append('discipline', filters.discipline);
+                if (filters.discipline) params.append('disc', filters.discipline); // Use 'disc' as per API endpoint inferred
                 if (filters.item_type) params.append('item_type', filters.item_type);
                 if (filters.punch_status) params.append('punch_status', filters.punch_status);
 
@@ -938,8 +976,7 @@
                     const punches = await response.json();
                     console.log("Punches API Success Response:", punches);
                     renderPunchesTable(punches);
-                    updateStats(punches); // Update stats based on the received data
-                    // updateAnalytics(punches); // Update analytics based on the received data - currently just stats
+                    updateQuickStats(punches); // Update stats based on the received data
 
                 } catch (error) {
                     console.error('Error fetching punches:', error);
@@ -951,6 +988,69 @@
                 }
             }
 
+            // NEW function to fetch ALL punches specifically for analytics
+             async function fetchAnalyticsData() {
+                 console.log("Fetching ALL punches for analytics.");
+                 // Use punches tab loading/error elements temporarily for analytics if no dedicated ones exist
+                 // Or add dedicated loading/error for analytics section
+                 // NOTE: Using the punches loading spinner might be confusing.
+                 // Consider adding a dedicated spinner/message within the analytics tab itself.
+                 const analyticsLoading = document.getElementById('punches-loading'); // Reuse for simplicity
+                 const analyticsError = document.getElementById('punches-error'); // Reuse for simplicity
+
+
+                 hideError(analyticsError);
+                 // Show loading spinner for analytics
+                 showLoading(analyticsLoading);
+
+                 // Hide charts and show placeholders while loading
+                 punchesByTypeCanvas.style.display = 'none';
+                 punchesByItemTypeCanvas.style.display = 'none';
+                 punchesByTypePlaceholder.style.display = 'block';
+                 punchesByItemTypePlaceholder.style.display = 'block';
+
+
+                 const params = new URLSearchParams();
+                 // No filters for analytics endpoint (assuming /punches? with no params returns all)
+
+                 try {
+                     const response = await fetch(`${API_URL}/punches?${params.toString()}`); // Fetch ALL data
+
+                     if (!response.ok) {
+                         const errorDetail = await response.text();
+                         console.error("Analytics Data API Error Response:", errorDetail);
+                         throw new Error(`API error: ${response.status} ${response.statusText}. Details: ${errorDetail.substring(0, 200)}...`);
+                     }
+
+                     const allPunches = await response.json();
+                     console.log("Analytics Data API Success Response:", allPunches);
+
+                     // Hide the placeholder paragraph and show the canvas
+                     punchesByTypePlaceholder.style.display = 'none';
+                     punchesByItemTypePlaceholder.style.display = 'none';
+                     punchesByTypeCanvas.style.display = 'block';
+                     punchesByItemTypeCanvas.style.display = 'block';
+
+
+                     updateAnalyticsStats(allPunches); // Update ANALYTICS stats and render charts
+
+                 } catch (error) {
+                     console.error('Error fetching analytics data:', error);
+                     showError(analyticsError, `${getTranslation('Error loading analytics data:', 'خطا در بارگذاری اطلاعات تحلیل‌ها:')} ${error.message}`);
+                     // Optionally clear analytics stats elements
+                     // Show the placeholder text again if fetch fails
+                     punchesByTypePlaceholder.style.display = 'block';
+                     punchesByItemTypePlaceholder.style.display = 'block';
+                     punchesByTypeCanvas.style.display = 'none';
+                     punchesByItemTypeCanvas.style.display = 'none';
+
+                 } finally {
+                     hideLoading(analyticsLoading);
+                     // No button to enable/disable specific to analytics fetch
+                 }
+             }
+
+
             async function submitPunchResolution(punchData, isModal = false) {
                  console.log("Submitting punch resolution:", punchData, "Is Modal:", isModal);
                  const loadingElement = isModal ? modalResolutionLoading : resolutionLoading;
@@ -960,7 +1060,7 @@
 
 
                  hideError(errorElement);
-                 hideSuccess(successElement);
+                 hideSuccess(successElement); // Hide previous success message
                  showLoading(loadingElement);
                  disableButton(submitButton);
 
@@ -1007,10 +1107,13 @@
                              item_type: itemTypeFilter.value,
                              punch_status: punchStatusFilter.value
                         };
-                         // Add a small delay before refetching to allow backend vectorstore rebuild
-                         setTimeout(() => {
-                             fetchPunches(currentFilters);
-                         }, 500);
+                         // Re-fetch the current punches list AND the global analytics data
+                         fetchPunches(currentFilters); // Refresh table and quick stats
+                         // Only fetch analytics data if the analytics tab is currently active
+                         // This avoids unnecessary fetches on other tabs
+                         if (document.getElementById('analytics-tab').classList.contains('active')) {
+                             fetchAnalyticsData(); // Refresh analytics stats (requires fetching all data)
+                         }
 
 
                     } else {
@@ -1044,23 +1147,24 @@
                     const row = punchesTableBody.insertRow();
 
                     // Helper to safely get cell value, showing '-' for 'None' or empty
+                    // API returns dictionary keys matching original Excel column names (likely)
                     const getCellValue = (col) => {
-                         const value = punch[col];
+                         const value = punch[col]; // Access using Excel column names
                          return (value === 'None' || value === '' || value === undefined) ? '-' : value;
                     };
 
+                    // These column names must match keys returned by the /punches API endpoint
                     row.insertCell().innerText = getCellValue('Punch ID');
                     row.insertCell().innerText = getCellValue('Task Number');
-                     // Use 'Punch' for description based on setup() mapping in rag/core.py
-                    row.insertCell().innerText = getCellValue('Punch');
+                    row.insertCell().innerText = getCellValue('Punch'); // Assuming 'Punch' contains description
                     row.insertCell().innerText = getCellValue('Item');
                     row.insertCell().innerText = getCellValue('ItemType');
 
                     const status = getCellValue('Punch Status');
                     const statusCell = row.insertCell();
                     statusCell.innerText = status;
-                    // Add class for styling based on status
-                    statusCell.classList.add(`punch-status-${status.toLowerCase()}`);
+                    // Add class for styling based on status (assuming '0', '1', '2')
+                    statusCell.classList.add(`punch-status-${status.trim().toLowerCase()}`); // Trim and lowercase for robustness
 
 
                     row.insertCell().innerText = getCellValue('Disc');
@@ -1068,51 +1172,268 @@
                     const actionsCell = row.insertCell();
                     const resolveButton = document.createElement('button');
                     resolveButton.innerText = getTranslation('Resolve', 'رفع'); // Localize button text
+                    // Pass the Punch ID from the data to the modal
                     resolveButton.onclick = () => openResolveModal(getCellValue('Punch ID'));
                     actionsCell.appendChild(resolveButton);
                 });
                  console.log("Punches table rendering complete.");
             }
 
-             function updateStats(punches) {
-                 console.log("Updating stats with", punches.length, "punches.");
+             // Update ONLY Quick Stats (sidebar)
+             function updateQuickStats(punches) {
+                 console.log("Updating quick stats with", punches.length, "punches.");
+
+                 // Note: These stats reflect the *currently filtered* list from fetchPunches
                  const total = punches.length;
-                 const open = punches.filter(p => p['Punch Status'] === '0').length;
-                 const resolved = punches.filter(p => p['Punch Status'] === '1').length;
-                 const closed = punches.filter(p => p['Punch Status'] === '2').length;
+                 const open = punches.filter(p => p['Punch Status'] && p['Punch Status'].toString().trim() === '0').length;
+                 const resolved = punches.filter(p => p['Punch Status'] && p['Punch Status'].toString().trim() === '1').length;
+                 // Closed stats are not displayed in quick stats currently based on HTML IDs
+                 // const closed = punches.filter(p => p['Punch Status'] && p['Punch Status'].toString().trim() === '2').length;
+
+                 // Discipline stats based on filtered list for quick stats
+                 const electrical = punches.filter(p => p['Disc'] && p['Disc'].toString().trim().toLowerCase() === 'el').length;
 
 
-                 // Add other specific stats based on Disc
-                 const electrical = punches.filter(p => p['Disc'] === 'EL').length;
-                 const instrumentation = punches.filter(p => p['Disc'] === 'Ins').length;
-                 const mechanical = punches.filter(p => p['Disc'] === 'Mech').length;
-                 const civil = punches.filter(p => p['Disc'] === 'Civil').length;
-
-
-                 // Update Quick Stats (sidebar) - These should ideally show stats for *all* data, not filtered
-                 // To show stats for *all* data, we would need a separate API endpoint (e.g., /stats)
-                 // For now, they reflect the stats of the *currently filtered* list shown in the table.
+                 // Update Quick Stats (sidebar)
                  totalPunchesCount.innerText = total;
                  openPunchesCount.innerText = open;
                  resolvedPunchesCount.innerText = resolved;
-                 // Note: Quick stats only have space for 3, let's show Total, Open, Resolved
-                 // electricalPunchesCount.innerText = electrical; // Not displayed in quick stats grid
+                 electricalPunchesCount.innerText = electrical;
+
+                 console.log("Quick Stats updated.");
+             }
+
+             // NEW function to update ONLY Analytics Stats AND render charts
+             function updateAnalyticsStats(allPunches) {
+                  console.log("Updating analytics stats and rendering charts with", allPunches.length, "total punches.");
+
+                  // --- Update Number Stats ---
+                  const total = allPunches.length;
+                  const open = allPunches.filter(p => p['Punch Status'] && p['Punch Status'].toString().trim() === '0').length;
+                  const resolved = allPunches.filter(p => p['Punch Status'] && p['Punch Status'].toString().trim() === '1').length;
+                  const closed = allPunches.filter(p => p['Punch Status'] && p['Punch Status'].toString().trim() === '2').length;
 
 
-                 // Update Analytics Stats (analytics tab) - These should ideally show stats for *all* data.
-                 // Since fetchPunches only fetches the *filtered* data, these stats will also reflect the filtered data.
-                 // To show global stats, refetch all punches or create a dedicated stats endpoint.
-                 analyticsTotalPunchesCount.innerText = total;
-                 analyticsOpenPunchesCount.innerText = open;
-                 analyticsResolvedPunchesCount.innerText = resolved;
-                 analyticsElectricalPunchesCount.innerText = electrical;
-                 instrumentationPunchesCount.innerText = instrumentation;
-                 mechanicalPunchesCount.innerText = mechanical;
-                 civilPunchesCount.innerText = civil;
+                  // Discipline stats based on the *full* list for analytics
+                  const electrical = allPunches.filter(p => p['Disc'] && p['Disc'].toString().trim().toLowerCase() === 'el').length;
+                  const instrumentation = allPunches.filter(p => p['Disc'] && p['Disc'].toString().trim().toLowerCase() === 'ins').length;
+                  const mechanical = allPunches.filter(p => p['Disc'] && p['Disc'].toString().trim().toLowerCase() === 'mech').length;
+                  const civil = allPunches.filter(p => p['Disc'] && p['Disc'].toString().trim().toLowerCase() === 'civil').length;
 
-                 console.log("Stats updated.");
 
-                 // Chart placeholders remain placeholders unless a charting library is added.
+                  analyticsTotalPunchesCount.innerText = total;
+                  analyticsOpenPunchesCount.innerText = open;
+                  analyticsResolvedPunchesCount.innerText = resolved;
+                  analyticsElectricalPunchesCount.innerText = electrical;
+                  instrumentationPunchesCount.innerText = instrumentation;
+                  mechanicalPunchesCount.innerText = mechanical;
+                  civilPunchesCount.innerText = civil;
+
+                  console.log("Analytics Stats numbers updated.");
+
+                  // --- Prepare and Render Charts ---
+                  renderPunchesByDisciplineChart(allPunches);
+                  renderPunchesByItemTypeChart(allPunches);
+
+
+             }
+
+             // NEW function to render Punches by Discipline Chart
+             function renderPunchesByDisciplineChart(punches) {
+                 console.log("Rendering Punches by Discipline chart...");
+                 // Destroy existing chart instance if it exists
+                 if (punchesByTypeChartInstance) {
+                     punchesByTypeChartInstance.destroy();
+                 }
+
+                 // Ensure canvas element is available
+                 if (!punchesByTypeCanvas) {
+                      console.error("Punches by Type canvas element not found!");
+                     // Optionally show placeholder if canvas isn't found
+                     punchesByTypePlaceholder.style.display = 'block';
+                     punchesByTypeCanvas.style.display = 'none';
+                      return;
+                 }
+                 const ctx = punchesByTypeCanvas.getContext('2d');
+
+
+                 // Aggregate data by discipline
+                 const disciplineCounts = {};
+                 punches.forEach(p => {
+                      const disc = p['Disc'] && p['Disc'].toString().trim() ? p['Disc'].toString().trim() : 'Unknown';
+                      disciplineCounts[disc] = (disciplineCounts[disc] || 0) + 1;
+                 });
+
+                 const labels = Object.keys(disciplineCounts);
+                 const data = Object.values(disciplineCounts);
+
+                  if (labels.length === 0) {
+                     console.log("No data for Punches by Discipline chart.");
+                     // Show a message or hide the chart if no data
+                      ctx.clearRect(0, 0, punchesByTypeCanvas.width, punchesByTypeCanvas.height); // Clear canvas
+                      punchesByTypePlaceholder.innerText = getTranslation('No data available for this chart.', 'داده‌ای برای نمایش در این نمودار موجود نیست.'); // Update placeholder text
+                      punchesByTypePlaceholder.style.display = 'block';
+                      punchesByTypeCanvas.style.display = 'none';
+                     return;
+                  }
+
+
+                 // Define some colors (adjust as needed)
+                 const backgroundColors = [
+                     'rgba(52, 152, 219, 0.8)', // secondary-color (Blue)
+                     'rgba(44, 62, 80, 0.8)',  // primary-color (Dark Blue/Grey)
+                     'rgba(46, 204, 113, 0.8)', // success-color (Green)
+                     'rgba(231, 76, 60, 0.8)',  // accent-color (Red)
+                     'rgba(149, 165, 166, 0.8)', // grey (Light Grey)
+                     'rgba(241, 196, 15, 0.8)'   // yellow (Orange/Yellow)
+                 ];
+                 const borderColors = [
+                     'rgba(52, 152, 219, 1)',
+                     'rgba(44, 62, 80, 1)',
+                     'rgba(46, 204, 113, 1)',
+                     'rgba(231, 76, 60, 1)',
+                     'rgba(149, 165, 166, 1)',
+                     'rgba(241, 196, 15, 1)'
+                 ];
+
+                 // Create the chart
+                 punchesByTypeChartInstance = new Chart(ctx, { // Use ctx here
+                     type: 'bar', // or 'pie', 'doughnut'
+                     data: {
+                         labels: labels,
+                         datasets: [{
+                             label: getTranslation('Number of Punches', 'تعداد پانچ'), // Localize label
+                             data: data,
+                             backgroundColor: backgroundColors.slice(0, labels.length), // Use enough colors
+                             borderColor: borderColors.slice(0, labels.length),
+                             borderWidth: 1
+                         }]
+                     },
+                     options: {
+                         responsive: true,
+                         maintainAspectRatio: false, // Allow aspect ratio control by CSS
+                         scales: {
+                              y: { // Only needed for bar/line charts
+                                  beginAtZero: true,
+                                  ticks: {
+                                       stepSize: 1, // Ensure whole numbers for counts
+                                       callback: function(value) {
+                                            if (Number.isInteger(value)) {
+                                                return value;
+                                            }
+                                            return ''; // Hide non-integer ticks
+                                       }
+                                  }
+                              }
+                            // x: { // Add x-axis options if needed, e.g., for long labels
+                            //     ticks: {
+                            //         autoSkip: false,
+                            //         maxRotation: 90,
+                            //         minRotation: 0
+                            //     }
+                            // }
+                         },
+                         plugins: {
+                              legend: {
+                                  display: false // Hide legend as disciplines are on x-axis
+                              },
+                              title: {
+                                  display: false, // Title is in the h3 above the chart
+                                  text: getTranslation('Punches by Discipline', 'پانچ‌ها بر اساس دیسیپلین') // Can add title here instead of h3
+                              }
+                         }
+                     }
+                 });
+                  console.log("Punches by Discipline chart rendered.");
+             }
+
+             // NEW function to render Punches by Item Type Chart
+             function renderPunchesByItemTypeChart(punches) {
+                  console.log("Rendering Punches by Item Type chart...");
+                 // Destroy existing chart instance if it exists
+                 if (punchesByItemTypeChartInstance) {
+                     punchesByItemTypeChartInstance.destroy();
+                 }
+
+                 // Ensure canvas element is available
+                 if (!punchesByItemTypeCanvas) {
+                      console.error("Punches by Item Type canvas element not found!");
+                       // Optionally show placeholder if canvas isn't found
+                     punchesByItemTypePlaceholder.style.display = 'block';
+                     punchesByItemTypeCanvas.style.display = 'none';
+                      return;
+                 }
+                 const ctx = punchesByItemTypeCanvas.getContext('2d');
+
+                 // Aggregate data by ItemType
+                 const itemTypeCounts = {};
+                 punches.forEach(p => {
+                      const itemType = p['ItemType'] && p['ItemType'].toString().trim() ? p['ItemType'].toString().trim() : 'Unknown';
+                      itemTypeCounts[itemType] = (itemTypeCounts[itemType] || 0) + 1;
+                 });
+
+                 const labels = Object.keys(itemTypeCounts);
+                 const data = Object.values(itemTypeCounts);
+
+                  if (labels.length === 0) {
+                     console.log("No data for Punches by Item Type chart.");
+                      ctx.clearRect(0, 0, punchesByItemTypeCanvas.width, punchesByItemTypeCanvas.height); // Clear canvas
+                      punchesByItemTypePlaceholder.innerText = getTranslation('No data available for this chart.', 'داده‌ای برای نمایش در این نمودار موجود نیست.'); // Update placeholder text
+                      punchesByItemTypePlaceholder.style.display = 'block';
+                      punchesByItemTypeCanvas.style.display = 'none';
+                     return;
+                  }
+
+                 // Use different colors or the same palette
+                  const backgroundColors = [
+                     'rgba(255, 99, 132, 0.8)', // Red
+                     'rgba(255, 159, 64, 0.8)', // Orange
+                     'rgba(255, 205, 86, 0.8)', // Yellow
+                     'rgba(75, 192, 192, 0.8)', // Green
+                     'rgba(54, 162, 235, 0.8)', // Blue
+                     'rgba(153, 102, 255, 0.8)',// Purple
+                     'rgba(201, 203, 207, 0.8)' // Grey
+                 ];
+                  const borderColors = [
+                     'rgb(255, 99, 132)',
+                     'rgb(255, 159, 64)',
+                     'rgb(255, 205, 86)',
+                     'rgb(75, 192, 192)',
+                     'rgb(54, 162, 235)',
+                     'rgb(153, 102, 255)',
+                     'rgb(201, 203, 207)'
+                 ];
+
+
+                 // Create the chart (e.g., Doughnut or Pie for types)
+                 punchesByItemTypeChartInstance = new Chart(ctx, { // Use ctx here
+                     type: 'doughnut', // Or 'bar', 'pie'
+                     data: {
+                         labels: labels,
+                         datasets: [{
+                             label: getTranslation('Number of Punches', 'تعداد پانچ'), // Localize label
+                             data: data,
+                              backgroundColor: backgroundColors.slice(0, labels.length),
+                              borderColor: borderColors.slice(0, labels.length),
+                             hoverOffset: 4 // Add hover effect
+                         }]
+                     },
+                     options: {
+                         responsive: true,
+                         maintainAspectRatio: false,
+                         plugins: {
+                             legend: {
+                                 position: 'top', // Position the legend
+                             },
+                             title: {
+                                display: false, // Title in h3
+                                text: getTranslation('Punches by Item Type', 'پانچ‌ها بر اساس نوع آیتم')
+                             }
+                         }
+                     }
+                 });
+                  console.log("Punches by Item Type chart rendered.");
+
              }
 
 
@@ -1139,24 +1460,29 @@
                 // Special actions for specific tabs on open
                 if (tabId === 'punches-tab') {
                     console.log("Punches tab opened. Fetching punches...");
-                    // Load punches when the Punches tab is opened
+                    // Load punches when the Punches tab is opened using current filters
                     const currentFilters = {
                          discipline: disciplineFilter.value,
                          item_type: itemTypeFilter.value,
                          punch_status: punchStatusFilter.value
                     };
-                    fetchPunches(currentFilters);
+                    fetchPunches(currentFilters); // Fetch for table and quick stats
                 } else if (tabId === 'add-punch-tab') {
                     console.log("Add Resolution tab opened. Clearing form messages.");
                     // Clear resolution form messages when opening tab
                     hideError(resolutionError);
                     hideSuccess(resolutionSuccess);
+                    // Generate a new revision ID when opening the tab for the form
+                    const timestamp = new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+                    const random = Math.floor(Math.random() * 1000);
+                    revisionResolutionInput.value = `${timestamp}_${random}`;
+                    revisionResolutionInput.placeholder = `e.g., ${revisionResolutionInput.value}`;
+
                 } else if (tabId === 'analytics-tab') {
-                     console.log("Analytics tab opened.");
-                     // Analytics stats are updated by fetchPunches when Punches tab is viewed or filters applied.
-                     // To ensure analytics always shows *all* data stats, we'd need to fetch all data here
-                     // or have a dedicated stats endpoint. For now, it shows stats of the *last fetched* (likely filtered) list.
-                     // No extra fetch needed here unless analytics needs *all* data regardless of filters.
+                     console.log("Analytics tab opened. Fetching data for analytics...");
+                     fetchAnalyticsData(); // Fetch ALL data specifically for analytics stats and charts
+
+
                 } else if (tabId === 'query-tab') {
                     console.log("Query tab opened.");
                      hideError(queryError);
@@ -1164,7 +1490,8 @@
                 } else if (tabId === 'search-tab') {
                      console.log("Search tab opened.");
                      hideError(searchError);
-                     // Search results (which are RAG query results) are persistent
+                     // Search results (placeholder messages) are persistent
+                     searchPlaceholder.style.display = 'block'; // Ensure placeholder is visible
                 }
             }
 
@@ -1191,7 +1518,16 @@
             function closeModal() {
                 console.log("Closing resolve modal.");
                 resolveModal.style.display = 'none';
-                // Clear modal form? Maybe not needed if populated on open
+                // Optionally clear modal form fields
+                modalPunchIdInput.value = '';
+                modalNewStatusSelect.value = '1';
+                modalResolutionTextTextarea.value = '';
+                modalRevisionInput.value = '';
+
+                // Hide any messages inside the modal
+                hideError(modalResolutionError);
+                hideSuccess(modalResolutionSuccess);
+                hideLoading(modalResolutionLoading); // Ensure spinner is hidden
             }
 
             // --- Language Toggle ---
@@ -1243,8 +1579,8 @@
                     'revision-resolution-label': 'Revision:',
                     'submit-resolution-btn': 'Submit Resolution',
                     'resolution-loading-text': 'Processing resolution...',
-                    'resolution-success-heading': 'Resolution Success',
-                    'resolution-success-text': 'The punch resolution has been successfully added to the system.',
+                    'resolution-success-heading': 'Resolution Success', // Keep heading for card style
+                    'resolution-success-text': 'The punch resolution has been successfully added to the system.', // Text for card/message
                     'analytics-heading': 'Analytics Dashboard',
                     'analytics-total-punches-stat': 'Total Punches',
                     'analytics-open-punches-stat': 'Open Punches',
@@ -1253,8 +1589,8 @@
                     'analytics-instrumentation-punches-stat': 'Instrumentation Punches',
                     'analytics-mechanical-punches-stat': 'Mechanical Punches',
                     'analytics-civil-punches-stat': 'Civil Punches',
-                    'punches-by-type-heading': 'Punches by Type (Requires Charting Library)',
-                    'punches-by-item-type-heading': 'Punches by Item Type (Requires Charting Library)',
+                    'punches-by-type-heading': 'Punches by Type', // Removed placeholder text
+                    'punches-by-item-type-heading': 'Punches by Item Type', // Removed placeholder text
                     'modal-resolve-heading': 'Resolve Punch',
                     'modal-punch-id-label': 'Punch ID:',
                     'modal-new-status-label': 'New Status:',
@@ -1271,8 +1607,11 @@
                      'Error submitting resolution:': 'Error submitting resolution:',
                      'No punches found matching criteria.': 'No punches found matching criteria.',
                      'Executing RAG query. See results in the "Query" tab.': 'Executing RAG query. See results in the "Query" tab.',
-                     'Please enter a search term.': 'Please enter a search term.'
-
+                     'Please enter a search term.': 'Please enter a search term.',
+                     'No answer provided by RAG system.': 'No answer provided by RAG system.', // Added for query response
+                     'Error loading analytics data:': 'Error loading analytics data:', // Added translation key
+                     'Number of Punches': 'Number of Punches', // For chart label
+                      'No data available for this chart.': 'No data available for this chart.' // Added translation key for empty charts
                 },
                 'fa': {
                     'system-description': 'سیستم مدیریت بازرسی تجهیزات و پانچ',
@@ -1329,8 +1668,8 @@
                      'analytics-instrumentation-punches-stat': 'پانچ‌های ابزار دقیق',
                      'analytics-mechanical-punches-stat': 'پانچ‌های مکانیک',
                      'analytics-civil-punches-stat': 'پانچ‌های عمران',
-                    'punches-by-type-heading': 'پانچ‌ها بر اساس نوع (نیاز به کتابخانه نمودار)',
-                    'punches-by-item-type-heading': 'پانچ‌ها بر اساس نوع آیتم (نیاز به کتابخانه نمودار)',
+                    'punches-by-type-heading': 'پانچ‌ها بر اساس نوع', // Removed placeholder text
+                    'punches-by-item-type-heading': 'پانچ‌ها بر اساس نوع آیتم', // Removed placeholder text
                      'modal-resolve-heading': 'رفع پانچ',
                     'modal-punch-id-label': 'کد پانچ:',
                     'modal-new-status-label': 'وضعیت جدید:',
@@ -1346,8 +1685,12 @@
                       'Failed to load data.': 'بارگذاری داده ناموفق بود.',
                       'Error submitting resolution:': 'خطا در ثبت راه حل:',
                       'No punches found matching criteria.': 'هیچ پانچی با معیارهای فیلتر مطابقت ندارد.',
-                      'Executing RAG query. See results in the "Query" tab.': 'درحال اجرای استعلام RAG. پاسخ در تب "استعلام" نمایش داده خواهد شد.',
-                      'Please enter a search term.': 'لطفاً عبارت جستجو را وارد کنید.'
+                      'Executing RAG query. See results in the "Query" tab.': 'درحال اجرای استعلام RAG. پاسخ در تب "استعلام" مشاهده کنید.',
+                      'Please enter a search term.': 'لطفاً عبارت جستجو را وارد کنید.',
+                      'No answer provided by RAG system.': 'سیستم RAG پاسخی ارائه نداد.',
+                      'Error loading analytics data:': 'خطا در بارگذاری اطلاعات تحلیل‌ها:',
+                      'تعداد پانچ': 'تعداد پانچ', // For chart label
+                       'داده‌ای برای نمایش در این نمودار موجود نیست.': 'داده‌ای برای نمایش در این نمودار موجود نیست.' // Added translation key for empty charts
                 }
             };
 
@@ -1358,6 +1701,17 @@
             function applyTranslation(lang) {
                 currentLang = lang;
                 document.body.style.direction = (lang === 'fa') ? 'rtl' : 'ltr';
+
+                // Set active class on language buttons
+                document.querySelectorAll('.language-btn').forEach(btn => {
+                     if (btn.getAttribute('data-lang') === lang) {
+                         btn.classList.add('active');
+                     } else {
+                         btn.classList.remove('active');
+                     }
+                });
+
+
                 document.title = getTranslation('Equipment Inspection RAG System', 'Equipment Inspection RAG System');
 
                 // Get all elements with translation keys (if you added data-lang-key attributes)
@@ -1389,7 +1743,7 @@
 
                 document.getElementById('query-heading').innerText = getTranslation('query-heading', 'Ask the RAG System');
                 document.getElementById('query-label').innerText = getTranslation('query-label', 'Ask a question:');
-                document.getElementById('query-input-textarea').placeholder = getTranslation('query-input', 'Ask a question in English or Persian. For example: \'Show me all punches for item MSC COR CP-A48/A.R\' or \'چه تعداد پانچ با وضعیت 0 داریم؟\''); // Corrected ID
+                document.getElementById('query-input-textarea').placeholder = getTranslation('query-input', 'Ask a question in English or Persian. For example: \'Show me all punches for item MSC COR CP-A48/A.R\' or \'چه تعداد پانچ با وضعیت 0 داریم؟\'');
                 document.getElementById('submit-query-btn').innerText = getTranslation('submit-query-btn', 'Submit Query');
                 document.getElementById('query-loading-text').innerText = getTranslation('query-loading-text', 'Processing query...');
                 document.getElementById('answer-heading').innerText = getTranslation('answer-heading', 'Answer:');
@@ -1404,15 +1758,15 @@
                 document.getElementById('status-col-header').innerText = getTranslation('status-col-header', 'Status');
                  document.getElementById('discipline-col-header').innerText = getTranslation('discipline-col-header', 'Discipline');
                 document.getElementById('actions-col-header').innerText = getTranslation('actions-col-header', 'Actions');
-                // Need to re-render table rows for localized 'Resolve' button text
-                 const currentFilters = {
-                             discipline: disciplineFilter.value,
-                             item_type: itemTypeFilter.value,
-                             punch_status: punchStatusFilter.value
-                        };
-                 // Re-fetch or re-render if data is available
-                 if(punchesTableBody.rows.length > 0 && punchesTableBody.rows[0].cells.length > 1) { // Check if table has data rows
-                     // Ideally, re-render the current data, but fetching is simpler if inefficient
+                // Re-render table rows for localized 'Resolve' button text - Trigger a fetch if needed
+                 const punchesTabContent = document.getElementById('punches-tab');
+                 if (punchesTabContent.classList.contains('active')) {
+                     // If currently on punches tab, re-fetch to update localized button text
+                      const currentFilters = {
+                         discipline: disciplineFilter.value,
+                         item_type: itemTypeFilter.value,
+                         punch_status: punchStatusFilter.value
+                    };
                      fetchPunches(currentFilters);
                  }
 
@@ -1425,7 +1779,8 @@
                 document.getElementById('submit-resolution-btn').innerText = getTranslation('submit-resolution-btn', 'Submit Resolution');
                 document.getElementById('resolution-loading-text').innerText = getTranslation('resolution-loading-text', 'Processing resolution...');
                 document.getElementById('resolution-success-heading').innerText = getTranslation('resolution-success-heading', 'Resolution Success');
-                document.getElementById('resolution-success-text').innerText = getTranslation('resolution-success-text', 'The punch resolution has been successfully added to the system.');
+                // resolution-success element is just a div, update its text directly
+                // document.getElementById('resolution-success').innerText = getTranslation('resolution-success-text', 'The punch resolution has been successfully added to the system.');
 
 
                  document.getElementById('analytics-heading').innerText = getTranslation('analytics-heading', 'Analytics Dashboard');
@@ -1437,12 +1792,9 @@
                   document.getElementById('analytics-mechanical-punches-stat').innerText = getTranslation('analytics-mechanical-punches-stat', 'Mechanical Punches');
                  document.getElementById('analytics-civil-punches-stat').innerText = getTranslation('analytics-civil-punches-stat', 'Civil Punches');
 
-                 document.getElementById('punches-by-type-heading').innerText = getTranslation('punches-by-type-heading', 'Punches by Type (Placeholder)');
-                 document.getElementById('punches-by-item-type-heading').innerText = getTranslation('punches-by-item-type-heading', 'Punches by Item Type (Placeholder)');
-
-                 // Update placeholder texts inside chart containers
-                 document.querySelector('#chart-by-type p').innerText = getTranslation('punches-by-type-heading', 'Punches by Type (Requires Charting Library)').replace(' (Requires Charting Library)', '') + getTranslation(' (Requires Charting Library)', '');
-                 document.querySelector('#chart-by-item-type p').innerText = getTranslation('punches-by-item-type-heading', 'Punches by Item Type (Requires Charting Library)').replace(' (Requires Charting Library)', '') + getTranslation(' (Requires Charting Library)', '');
+                 // Update placeholder texts inside chart containers titles (removed placeholder suffix)
+                 document.getElementById('punches-by-type-heading').innerText = getTranslation('punches-by-type-heading', 'Punches by Type');
+                 document.getElementById('punches-by-item-type-heading').innerText = getTranslation('punches-by-item-type-heading', 'Punches by Item Type');
 
 
                  document.getElementById('modal-resolve-heading').innerText = getTranslation('modal-resolve-heading', 'Resolve Punch');
@@ -1452,7 +1804,8 @@
                  document.getElementById('modal-revision-label').innerText = getTranslation('modal-revision-label', 'Revision:');
                  document.getElementById('modal-submit-resolution-btn').innerText = getTranslation('modal-submit-resolution-btn', 'Submit Resolution');
                  document.getElementById('modal-resolution-loading-text').innerText = getTranslation('modal-resolution-loading-text', 'Processing resolution...');
-                 document.getElementById('modal-resolution-success').innerText = getTranslation('modal-resolution-success', 'Resolution submitted successfully.');
+                 document.getElementById('modal-resolution-success').innerText = getTranslation('modal-resolution-success', 'Resolution submitted successfully.'); // Update modal success text
+
 
                 console.log(`Language switched to ${lang}.`);
             }
@@ -1483,16 +1836,16 @@
 
             // Query button
             submitQueryBtn.addEventListener('click', () => {
-                fetchQuery(queryInputTextarea.value); // Corrected ID
+                fetchQuery(queryInputTextarea.value);
             });
              // Allow pressing Enter (or Ctrl+Enter for multiline) in query textarea
-             queryInputTextarea.addEventListener('keypress', function(event) { // Corrected ID
-                 if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey) { // Basic Enter
-                      event.preventDefault();
+             queryInputTextarea.addEventListener('keypress', function(event) {
+                 // Check if Enter is pressed without Shift or Ctrl
+                 if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey) {
+                      event.preventDefault(); // Prevent newline in textarea
                       submitQueryBtn.click(); // Trigger button click
-                  } else if (event.key === 'Enter' && (event.shiftKey || event.ctrlKey)) {
-                     // Allow Shift+Enter or Ctrl+Enter for new line
                   }
+                  // Allow Shift+Enter or Ctrl+Enter for new line (default browser behavior)
              });
 
 
@@ -1552,7 +1905,7 @@
             // Apply default language (English) on load
             applyTranslation('en');
 
-            // Load initial data when the page loads (e.g., open the Punches tab)
+            // Load initial data by opening the Punches tab
             // This will trigger fetchPunches automatically
              openTab('punches-tab');
 

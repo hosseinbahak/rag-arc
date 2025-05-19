@@ -1,75 +1,162 @@
-# api.py - Add some prints to see when endpoints are hit
-# api.py
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+import logging
+import traceback
+from typing import Optional, Dict, List, Any
+
+# Import your RAG class
 from rag.core import EquipmentInspectionRAG
-from rag.schema import QueryRequest, QueryResponse, PunchResolution
-from typing import List, Dict, Any
 
-# Initialize RAG system globally in the API module
-# This instance will be used by all incoming requests
+# --- Logging Setup ---
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+api_logger = logging.getLogger("FastAPIApi")
+
+# --- RAG Initialization ---
+EXCEL_DATA_PATH = "data/equipment_inspection_data.xlsx"
+rag_system: Optional[EquipmentInspectionRAG] = None
+
 try:
-    print("API: Initializing EquipmentInspectionRAG...")
-    # Make sure this path is correct relative to where api.py is run from (typically project root)
-    rag = EquipmentInspectionRAG("data/equipment_inspection_data.xlsx")
-    # Create graph here too, as main.py might not run first in some deployment scenarios
-    rag.create_graph()
-    print("API: RAG system initialized and graph created.")
+    api_logger.info(f"Initializing RAG system from {EXCEL_DATA_PATH}...")
+    rag_system = EquipmentInspectionRAG(EXCEL_DATA_PATH)
+    api_logger.info("RAG system setup complete. Creating graph...")
+    rag_system.create_graph()
+    if rag_system and rag_system.graph:
+        api_logger.info("RAG graph created successfully.")
+    else:
+        api_logger.error("Failed to create RAG graph.")
 except Exception as e:
-    print(f"API: Failed to initialize RAG system: {e}")
-    rag = None # Set rag to None if initialization fails
+    api_logger.error(f"Failed to initialize RAG system: {e}")
+    traceback.print_exc()
 
+# --- FastAPI Setup ---
 app = FastAPI()
 
-@app.post("/query", response_model=QueryResponse)
-def run_query(req: QueryRequest):
-    print(f"API: Received POST /query with query: {req.query}")
-    if rag is None:
-        raise HTTPException(status_code=500, detail="RAG system is not initialized.")
-    try:
-        answer = rag.query(req.query)
-        print("API: Query processed, returning answer.")
-        return QueryResponse(answer=answer)
-    except Exception as e:
-        print(f"API: Error processing query: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error during query processing: {e}")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# --- Request Models ---
+class QueryRequest(BaseModel):
+    query: str
+
+class ResolutionRequest(BaseModel):
+    punch_id: str
+    new_status: str = "1"
+    resolution_text: str = ""
+    revision_timestamp: str
+
+# --- Routes ---
+
+@app.get("/")
+async def read_root():
+    """Serve the main index.html file from static/ directory."""
+    index_path = os.path.join("static", "index.html")
+    if not os.path.exists(index_path):
+        api_logger.error(f"index.html not found at {index_path}")
+        raise HTTPException(status_code=404, detail="index.html not found")
+    try:
+        with open(index_path) as f:
+            return HTMLResponse(content=f.read(), status_code=200)
+    except Exception as e:
+        api_logger.error(f"Error serving index.html: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error serving index.html")
+
+@app.post("/query")
+async def handle_query(request: QueryRequest):
+    """Handle a user question via RAG pipeline."""
+    api_logger.info(f"Received query request: {request.query}")
+    if not rag_system or not rag_system.graph:
+        detail = "RAG system not initialized or graph unavailable."
+        if rag_system:
+            if rag_system.df is None:
+                detail = "RAG system initialized but data loading failed."
+            elif rag_system.llm is None:
+                detail = "RAG system initialized but LLM connection failed."
+            elif rag_system.retriever is None:
+                detail = "RAG system initialized but vectorstore/retriever failed."
+            elif rag_system.graph is None:
+                detail = "RAG system initialized but graph creation failed."
+        raise HTTPException(status_code=503, detail=detail)
+
+    try:
+        answer = rag_system.query(request.query)
+        api_logger.info("Query processed successfully.")
+        return {"answer": answer}
+    except Exception as e:
+        api_logger.error(f"Error processing query: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="An error occurred while processing the query.")
+
+@app.get("/punches")
+async def get_punches(disc: str = "", item_type: str = "", punch_status: str = ""):
+    """Fetch punches filtered by discipline, item type, and punch status."""
+    api_logger.info(f"Fetching punches: disc={disc}, item_type={item_type}, punch_status={punch_status}")
+    if not rag_system or rag_system.df is None:
+        detail = "RAG system not initialized or data unavailable."
+        raise HTTPException(status_code=503, detail=detail)
+
+    try:
+        punches = rag_system.filter_punches(disc=disc, item_type=item_type, punch_status=punch_status)
+        api_logger.info(f"Returning {len(punches)} punches.")
+        return punches
+    except Exception as e:
+        api_logger.error(f"Error filtering punches: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="An error occurred while fetching punches.")
 
 @app.post("/punches/resolve")
-def resolve_punch(data: PunchResolution):
-    print(f"API: Received POST /punches/resolve for punch_id: {data.punch_id}, status: {data.new_status}, revision: {data.revision}")
-    if rag is None:
-         raise HTTPException(status_code=500, detail="RAG system is not initialized.")
+async def resolve_punch(request: ResolutionRequest):
+    """Mark a punch as resolved and add revision data."""
+    api_logger.info(f"Resolving punch: {request.punch_id}")
+    if not rag_system or rag_system.df is None:
+        detail = "RAG system not initialized or data unavailable."
+        raise HTTPException(status_code=503, detail=detail)
+
     try:
-        rag.add_punch_resolution(
-            punch_id=data.punch_id,
-            new_status=data.new_status,
-            resolution_text=data.resolution_text,
-            revision=data.revision
+        rag_system.add_punch_resolution(
+            punch_id=request.punch_id,
+            new_status=request.new_status,
+            resolution_text=request.resolution_text,
+            revision_timestamp=request.revision_timestamp  # <-- FIXED ARG NAME
         )
-        print("API: Punch resolution processed.")
         return {"status": "success"}
     except ValueError as e:
-        print(f"API: Error adding resolution (ValueError): {e}")
-        raise HTTPException(status_code=404, detail=str(e)) # 404 if punch not found
+        api_logger.warning(f"Resolution validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        print(f"API: Error adding resolution: {e}")
+        api_logger.error(f"Error adding punch resolution: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error during resolution: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while submitting resolution.")
 
+@app.get("/health")
+async def health_check():
+    """Simple health check for backend + RAG status."""
+    if rag_system and rag_system.initialized_properly:
+        return {"status": "ok"}
+    return {"status": "degraded", "detail": "RAG system not fully initialized."}
 
-@app.get("/punches", response_model=List[Dict[str, Any]]) # Add response model hint
-def list_punches(discipline: str = "", item_type: str = "", punch_status: str = ""):
-    print(f"API: Received GET /punches with filters - Disc:'{discipline}', ItemType:'{item_type}', Status:'{punch_status}'")
-    if rag is None:
-         raise HTTPException(status_code=500, detail="RAG system is not initialized.")
+@app.post("/reload")
+async def reload_rag_system():
+    """Reload the RAG system from disk."""
+    global rag_system
     try:
-        df_filtered_records = rag.filter_punches(Disc=discipline, ItemType=item_type, Punch_Status=punch_status)
-        print(f"API: Filtered punches, returning {len(df_filtered_records)} records.")
-        return df_filtered_records
+        rag_system = EquipmentInspectionRAG(EXCEL_DATA_PATH)
+        rag_system.create_graph()
+        return {"status": "reloaded"}
     except Exception as e:
-        print(f"API: Error filtering punches: {e}")
+        api_logger.error(f"Failed to reload RAG system: {e}")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Internal server error during filtering: {e}")
-
-# The main.py will import this `app` instance and potentially mount it.
-# The previous main.py includes `app.include_router(api_app.router)`, which works.
+        return {"status": "failed", "error": str(e)}
